@@ -1,0 +1,13 @@
+{
+  "id": "rare_001",
+  "name": "Pixel Mage",
+  "description": "A mystical pixel mage wielding ancient 8-bit magic. Casts powerful spells.",
+  "cost": 3,
+  "attack": 2,
+  "health": 2,
+  "rarity": "rare",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/pixel_mage_static.png",
+  "gifPath": "assets/images/cards/pixel_mage_animated.gif",
+  "abilities": ["Spell Power: Your spells deal +1 damage", "Battlecry: Deal 1 damage to any target"]
+}

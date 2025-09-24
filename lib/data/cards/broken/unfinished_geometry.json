@@ -1,0 +1,16 @@
+{
+  "id": "epic_001",
+  "name": "Broken Geometry",
+  "description": "A mysterious construct of incomplete mathematical forms. Its undefined nature makes it unpredictable.",
+  "cost": 5,
+  "attack": 4,
+  "health": 6,
+  "rarity": "broken",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/unfinished_geometry/animated_unfinished_geometry.gif",
+  "gifPath": "assets/images/cards/unfinished_geometry/animated_unfinished_geometry.gif",
+  "abilities": [
+    "Void Form: Cannot be targeted by spells",
+    "Phase Shift: 50% chance to dodge attacks"
+  ]
+}

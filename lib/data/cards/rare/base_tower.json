@@ -1,0 +1,16 @@
+{
+  "id": "rare_002",
+  "name": "Base Tower",
+  "description": "Base Defending Tower ripped straight out of some TD Game.",
+  "cost": 2,
+  "attack": 2,
+  "health": 5,
+  "rarity": "rare",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/base_tower/base_tower.gif",
+  "gifPath": "assets/images/cards/base_tower/base_tower.gif",
+  "abilities": [
+    "Shoot Power: Your spells deal +1 damage",
+    "Laserbeam: Deal 1 damage to any target"
+  ]
+}

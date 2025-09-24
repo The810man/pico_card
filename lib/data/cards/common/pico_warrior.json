@@ -1,0 +1,13 @@
+{
+  "id": "common_001",
+  "name": "Pico Warrior",
+  "description": "A brave pixel warrior ready for battle. Basic but reliable.",
+  "cost": 2,
+  "attack": 2,
+  "health": 3,
+  "rarity": "common",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/pico_warrior_static.png",
+  "gifPath": "assets/images/cards/pico_warrior_animated.gif",
+  "abilities": ["Charge: Can attack immediately when played"]
+}

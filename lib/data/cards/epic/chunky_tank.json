@@ -1,0 +1,16 @@
+{
+  "id": "rare_002",
+  "name": "Chunky Tank",
+  "description": "A heavily armored war machine built for destruction. Its thick plating can withstand massive damage.",
+  "cost": 4,
+  "attack": 3,
+  "health": 7,
+  "rarity": "epic",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/chunky_tank/chunky_tank.png",
+  "gifPath": "assets/images/cards/chunky_tank/animated_chunky_tank.gif",
+  "abilities": [
+    "Armor Plating: Takes -1 damage from all sources",
+    "Tank Assault: Deal 1 damage to all enemies when played"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "legendary_001",
+  "name": "Some Bus",
+  "description": "Some random ass Bus! I thought is should be a Legendary card . . .",
+  "cost": 8,
+  "attack": 8,
+  "health": 8,
+  "rarity": "legendary",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/some_bus/some_bus.gif",
+  "gifPath": "assets/images/cards/some_bus/some_bus.gif",
+  "abilities": [
+    "Running over Children 5 damage",
+    "Drunken Driver 3% krit",
+    "Deadlyfart: Add a random legendary card to your hand"
+  ]
+}

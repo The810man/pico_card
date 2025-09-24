@@ -1,0 +1,13 @@
+{
+  "id": "common_002",
+  "name": "Toasty Toaster",
+  "description": "A friendly kitchen appliance that joined the battle. It may look harmless, but it can toast more than bread!",
+  "cost": 2,
+  "attack": 2,
+  "health": 2,
+  "rarity": "common",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/toasty_toaster/animated_toasty_toaster.gif",
+  "gifPath": "assets/images/cards/toasty_toaster/animated_toasty_toaster.gif",
+  "abilities": ["Toast: Deal 1 damage to a random enemy when played"]
+}

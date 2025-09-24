@@ -1,0 +1,11 @@
+flutter_launcher_icons:
+  image_path: "assets/images/pico-card-logo.png"
+
+  android: true
+  image_path_android: "assets/images/pico-card-logo.png"
+  min_sdk_android: 21
+
+  adaptive_icon_background: "#65212b" # or use an image path
+  adaptive_icon_foreground: "assets/images/pico-card-logo.png"
+
+  adaptive_icon_foreground_inset: 14
