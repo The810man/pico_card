@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nes_ui/nes_ui.dart';
 
 class PixelTheme {
   // Pixel color palette
@@ -101,7 +103,7 @@ class PixelTheme {
   }
 }
 
-class PixelButton extends StatefulWidget {
+class PixelButton extends ConsumerWidget {
   final String text;
   final VoidCallback? onPressed;
   final Color color;
@@ -109,95 +111,30 @@ class PixelButton extends StatefulWidget {
   final double width;
   final double height;
   final IconData? icon;
+  final NesButtonType type;
 
   const PixelButton({
     Key? key,
     required this.text,
     this.onPressed,
     this.color = PixelTheme.pixelBlue,
-    this.textColor = PixelTheme.pixelWhite,
+    this.textColor = const Color.fromARGB(255, 0, 0, 0),
     this.width = 120,
+    this.type = NesButtonType.normal,
     this.height = 40,
     this.icon,
   }) : super(key: key);
 
   @override
-  State<PixelButton> createState() => _PixelButtonState();
-}
-
-class _PixelButtonState extends State<PixelButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _isPressed = true);
-        _controller.forward();
-      },
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        _controller.reverse();
-        widget.onPressed?.call();
-      },
-      onTapCancel: () {
-        setState(() => _isPressed = false);
-        _controller.reverse();
-      },
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              width: widget.width,
-              height: widget.height,
-              decoration: PixelTheme.pixelButton(
-                color: _isPressed
-                    ? widget.color.withOpacity(0.8)
-                    : widget.color,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (widget.icon != null) ...[
-                      Icon(widget.icon, color: widget.textColor, size: 26),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(
-                      widget.text,
-                      style: PixelTheme.pixelTextBold(
-                        color: widget.textColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+  Widget build(BuildContext context, WidgetRef ref) {
+    return NesButton(
+      type: type,
+      onPressed: onPressed,
+      child: Row(
+        children: [
+          Icon(icon),
+          Text(text, style: Theme.of(context).textTheme.bodyMedium),
+        ],
       ),
     );
   }

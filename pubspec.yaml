@@ -43,6 +43,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   hooks_riverpod: ^2.6.1
   pixelarticons: ^0.4.0
+  nes_ui: ^0.25.0
 
 dev_dependencies:
   flutter_test:

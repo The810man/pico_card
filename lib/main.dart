@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/widgets/player_banner_widget.dart';
 import 'package:pico_card/widgets/striped_bg_animator.dart';
 import 'package:pixelarticons/pixel.dart';
@@ -14,7 +16,7 @@ import 'widgets/pixel_theme.dart';
 void main() {
   debugPrintBeginFrameBanner = false;
   debugPrintEndFrameBanner = false;
-  runApp(const PicoCardApp());
+  runApp(riverpod.ProviderScope(child: const PicoCardApp()));
 }
 
 class PicoCardApp extends StatelessWidget {
@@ -26,23 +28,7 @@ class PicoCardApp extends StatelessWidget {
       create: (context) => GameProvider()..initialize(),
       child: MaterialApp(
         title: 'Pico Card TCG',
-        theme: ThemeData(
-          primarySwatch: Colors.grey,
-          scaffoldBackgroundColor: Colors.black87,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.black87,
-            foregroundColor: Colors.white,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[700],
-              foregroundColor: Colors.white,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-          ),
-        ),
+        theme: flutterNesTheme(),
         home: const LoaderScreen(),
         debugShowCheckedModeBanner: false,
       ),
@@ -92,6 +78,20 @@ class MainMenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black87,
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            NesPulser(child: Text("Pico Card")),
+            NesRunningText(
+              text: "V0.0.1",
+              speed: 0.3,
+              textStyle: TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [Text("810"), Icon(Pixel.coin)],
+      ),
       body: Consumer<GameProvider>(
         builder: (context, gameProvider, child) {
           if (gameProvider.isLoading) {
@@ -105,6 +105,7 @@ class MainMenuScreen extends StatelessWidget {
                     'Loading Pico Card...',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
+                  NesPixelRowLoadingIndicator(),
                 ],
               ),
             );
@@ -112,187 +113,118 @@ class MainMenuScreen extends StatelessWidget {
 
           return Stack(
             children: [
-              InfiniteStripedBackground(isRed: true),
-              InfiniteStripedBackground(),
-              Positioned(
-                top: MediaQuery.of(context).size.height * 0.1,
-                bottom: 0,
-                left: MediaQuery.of(context).size.height * 0.03,
-                right: MediaQuery.of(context).size.height * 0.03,
-                child: Container(
-                  child: Image.asset(
-                    fit: BoxFit.fill,
-                    "assets/images/main_frame_open.png",
-                    filterQuality: FilterQuality.none,
-                  ),
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(color: Colors.transparent),
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      // Header
-                      Expanded(
-                        flex: 2,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Game Title
-                              Text(
-                                'PICO CARD',
-                                style: PixelTheme.pixelTextBold(
-                                  color: PixelTheme.pixelYellow,
-                                  fontSize: 36,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Trading Card Game',
-                                style: PixelTheme.pixelText(
-                                  color: PixelTheme.pixelLightGray,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              PlayerBannerWidget(
-                                name: "Paul Gerümpel",
-                                money: 5,
-                                width: 300,
-                                height: 100,
-                              ),
-                              // // Player info
-                              // PixelCard(
-                              //   backgroundColor: PixelTheme.pixelGray,
-                              //   borderColor: PixelTheme.pixelLightGray,
-                              //   child: Row(
-                              //     mainAxisSize: MainAxisSize.min,
-                              //     children: [
-                              //       Icon(
-                              //         Pixel.user,
-                              //         color: PixelTheme.pixelBlue,
-                              //       ),
-                              //       const SizedBox(width: 8),
-                              //       Text(
-                              //         gameProvider.player?.name ?? 'Player',
-                              //         style: PixelTheme.pixelTextBold(
-                              //           color: PixelTheme.pixelWhite,
-                              //           fontSize: 16,
-                              //         ),
-                              //       ),
-                              //       const SizedBox(width: 16),
-                              //       Icon(
-                              //         Pixel.coin,
-                              //         color: PixelTheme.pixelYellow,
-                              //       ),
-                              //       const SizedBox(width: 4),
-                              //       Text(
-                              //         '${gameProvider.player?.coins ?? 0}',
-                              //         style: PixelTheme.pixelTextBold(
-                              //           color: PixelTheme.pixelYellow,
-                              //           fontSize: 16,
-                              //         ),
-                              //       ),
-                              //     ],
-                              //   ),
-                              // ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Menu buttons
-                      Expanded(
-                        flex: 3,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              PixelButton(
-                                text: 'BATTLE',
-                                icon: Pixel.zap,
-                                color: PixelTheme.pixelRed,
-                                width: 200,
-                                height: 60,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const BattleScreen(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              PixelButton(
-                                text: 'COLLECTION',
-                                icon: Pixel.imagemultiple,
-                                color: PixelTheme.pixelBlue,
-                                width: 200,
-                                height: 60,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const CollectionScreen(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              PixelButton(
-                                text: 'DECK BUILDER',
-                                icon: Pixel.editbox,
-                                color: PixelTheme.pixelPurple,
-                                width: 200,
-                                height: 60,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const DeckBuilderScreen(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              PixelButton(
-                                text: 'SHOP',
-                                icon: Pixel.shoppingbag,
-                                color: PixelTheme.pixelGreen,
-                                width: 200,
-                                height: 60,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ShopScreen(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Footer
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'PIXEL TCG • LOW POLY STYLE',
-                          style: PixelTheme.pixelText(
-                            color: PixelTheme.pixelLightGray,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              NesContainer(
+                padding: EdgeInsets.all(1),
+                child: NesTabView(
+                  initialTabIndex: 1,
+                  tabs: [
+                    NesTabItem(child: homeWidget(context), label: "Main menu"),
+                    NesTabItem(child: Text("data"), label: "Settings"),
+                  ],
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget homeWidget(BuildContext context) {
+    return Stack(
+      children: [
+        InfiniteStripedBackground(),
+        Container(
+          padding: EdgeInsets.fromLTRB(15, 60, 15, 30),
+          child: NesContainer(
+            child: Column(
+              children: [
+                PlayerBannerWidget(
+                  name: "Super Gamer 123",
+                  money: 300,
+                  width: double.infinity,
+                  height: 80,
+                ),
+                SizedBox(height: 30),
+
+                Expanded(
+                  child: NesContainer(
+                    borderColor: Colors.white,
+                    padding: EdgeInsets.all(1),
+                    child: Image.asset(
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.none,
+                      "assets/images/imagePlaceholderPixel.png",
+                    ),
+                  ),
+                ),
+                SizedBox(height: 30),
+
+                PixelButton(
+                  text: ' BATTLE',
+                  type: NesButtonType.error,
+                  icon: Pixel.zap,
+                  color: PixelTheme.pixelRed,
+                  width: 200,
+                  height: 60,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BattleScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                PixelButton(
+                  text: ' COLLECTION',
+                  icon: Pixel.imagemultiple,
+                  type: NesButtonType.success,
+                  color: PixelTheme.pixelBlue,
+                  width: 200,
+                  height: 60,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CollectionScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                PixelButton(
+                  text: ' DECK BUILDER',
+                  icon: Pixel.editbox,
+                  type: NesButtonType.primary,
+                  color: PixelTheme.pixelPurple,
+                  width: 200,
+                  height: 60,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DeckBuilderScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                PixelButton(
+                  text: ' SHOP',
+                  icon: Pixel.shoppingbag,
+                  type: NesButtonType.warning,
+                  color: PixelTheme.pixelGreen,
+                  width: 200,
+                  height: 60,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ShopScreen()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

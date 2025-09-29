@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/widgets/pixel_theme.dart';
 import 'package:pixelarticons/pixel.dart';
 
@@ -19,7 +21,9 @@ class PlayerBannerWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    return NesContainer(
+      padding: EdgeInsets.all(5),
+      backgroundColor: Colors.black,
       width: width,
       height: height,
       child: Stack(
