@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' show useState;
+import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer, Provider;
 import 'package:provider/provider.dart';
 import '../models/card_model.dart';
 import '../services/game_provider.dart';
@@ -26,267 +28,227 @@ class _DeckBuilderScreenState extends State<DeckBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PixelTheme.pixelBlack,
-      appBar: AppBar(
-        title: Text(
-          'DECK BUILDER',
-          style: PixelTheme.pixelTextBold(fontSize: 16),
-        ),
-        backgroundColor: PixelTheme.pixelGray,
-        iconTheme: IconThemeData(color: PixelTheme.pixelWhite),
-        actions: [
-          Consumer<GameProvider>(
+    return HookConsumer(
+      builder: (context, ref, child) {
+        final showBack = useState(false);
+        return Scaffold(
+          backgroundColor: PixelTheme.pixelBlack,
+          appBar: AppBar(
+            title: Text('DECK BUILDER'),
+            backgroundColor: PixelTheme.pixelGray,
+            iconTheme: IconThemeData(color: PixelTheme.pixelWhite),
+            actions: [
+              Consumer<GameProvider>(
+                builder: (context, gameProvider, child) {
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    child: Text('${_workingDeck.length}/$_maxDeckSize'),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Consumer<GameProvider>(
             builder: (context, gameProvider, child) {
-              return Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  '${_workingDeck.length}/$_maxDeckSize',
-                  style: PixelTheme.pixelText(
-                    fontSize: 14,
-                    color: _workingDeck.length == _maxDeckSize
-                        ? PixelTheme.pixelGreen
-                        : PixelTheme.pixelYellow,
+              if (gameProvider.isLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: PixelTheme.pixelYellow,
                   ),
-                ),
+                );
+              }
+
+              final collection = gameProvider.playerCollection;
+              final workingDeckCards = gameProvider.availableCards
+                  .where((card) => _workingDeck.contains(card.id))
+                  .toList();
+
+              return Column(
+                children: [
+                  // Current Deck Section
+                  Container(
+                    height: 200,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('CURRENT DECK'),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: _workingDeck.isEmpty
+                              ? Center(child: Text('No cards in deck'))
+                              : ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: workingDeckCards.length,
+                                  itemBuilder: (context, index) {
+                                    final card = workingDeckCards[index];
+                                    final count = _workingDeck
+                                        .where((id) => id == card.id)
+                                        .length;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            _removeCardFromDeck(card.id),
+                                        child: Stack(
+                                          children: [
+                                            CardWidget(
+                                              showBack: showBack,
+                                              card: card,
+                                              width: 80,
+                                              height: 120,
+                                            ),
+                                            if (count > 1)
+                                              Positioned(
+                                                top: 4,
+                                                right: 4,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: PixelTheme.pixelBlue,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color:
+                                                          PixelTheme.pixelWhite,
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text('$count'),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Divider
+                  Container(height: 2, color: PixelTheme.pixelGray),
+
+                  // Collection Section
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('COLLECTION'),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: collection.isEmpty
+                                ? Center(child: Text('No cards in collection'))
+                                : GridView.builder(
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 3,
+                                          crossAxisSpacing: 8,
+                                          mainAxisSpacing: 8,
+                                          childAspectRatio: 0.7,
+                                        ),
+                                    itemCount: collection.length,
+                                    itemBuilder: (context, index) {
+                                      final card = collection[index];
+                                      final inDeckCount = _workingDeck
+                                          .where((id) => id == card.id)
+                                          .length;
+                                      final canAdd =
+                                          inDeckCount < 3 &&
+                                          _workingDeck.length < _maxDeckSize;
+
+                                      return GestureDetector(
+                                        onTap: canAdd
+                                            ? () => _addCardToDeck(card.id)
+                                            : null,
+                                        child: Stack(
+                                          children: [
+                                            Opacity(
+                                              opacity: canAdd ? 1.0 : 0.5,
+                                              child: CardWidget(
+                                                showBack: showBack,
+                                                card: card,
+                                                width: 100,
+                                                height: 140,
+                                              ),
+                                            ),
+                                            if (inDeckCount > 0)
+                                              Positioned(
+                                                top: 4,
+                                                right: 4,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        PixelTheme.pixelGreen,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color:
+                                                          PixelTheme.pixelWhite,
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text('$inDeckCount'),
+                                                ),
+                                              ),
+                                            if (!canAdd && inDeckCount < 3)
+                                              Positioned(
+                                                bottom: 4,
+                                                left: 4,
+                                                right: 4,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: PixelTheme.pixelRed
+                                                        .withOpacity(0.8),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    'DECK FULL',
+
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-        ],
-      ),
-      body: Consumer<GameProvider>(
-        builder: (context, gameProvider, child) {
-          if (gameProvider.isLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: PixelTheme.pixelYellow),
-            );
-          }
-
-          final collection = gameProvider.playerCollection;
-          final workingDeckCards = gameProvider.availableCards
-              .where((card) => _workingDeck.contains(card.id))
-              .toList();
-
-          return Column(
-            children: [
-              // Current Deck Section
-              Container(
-                height: 200,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CURRENT DECK',
-                      style: PixelTheme.pixelTextBold(fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: _workingDeck.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No cards in deck',
-                                style: PixelTheme.pixelText(
-                                  color: PixelTheme.commonColor,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: workingDeckCards.length,
-                              itemBuilder: (context, index) {
-                                final card = workingDeckCards[index];
-                                final count = _workingDeck
-                                    .where((id) => id == card.id)
-                                    .length;
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: GestureDetector(
-                                    onTap: () => _removeCardFromDeck(card.id),
-                                    child: Stack(
-                                      children: [
-                                        CardWidget(
-                                          card: card,
-                                          width: 80,
-                                          height: 120,
-                                        ),
-                                        if (count > 1)
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: PixelTheme.pixelBlue,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: PixelTheme.pixelWhite,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '$count',
-                                                style: PixelTheme.pixelTextBold(
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
+          bottomNavigationBar: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: PixelTheme.pixelGray,
+              border: Border(
+                top: BorderSide(color: PixelTheme.pixelWhite, width: 2),
               ),
-
-              // Divider
-              Container(height: 2, color: PixelTheme.pixelGray),
-
-              // Collection Section
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'COLLECTION',
-                        style: PixelTheme.pixelTextBold(fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: collection.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'No cards in collection',
-                                  style: PixelTheme.pixelText(
-                                    color: PixelTheme.commonColor,
-                                  ),
-                                ),
-                              )
-                            : GridView.builder(
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 8,
-                                      mainAxisSpacing: 8,
-                                      childAspectRatio: 0.7,
-                                    ),
-                                itemCount: collection.length,
-                                itemBuilder: (context, index) {
-                                  final card = collection[index];
-                                  final inDeckCount = _workingDeck
-                                      .where((id) => id == card.id)
-                                      .length;
-                                  final canAdd =
-                                      inDeckCount < 3 &&
-                                      _workingDeck.length < _maxDeckSize;
-
-                                  return GestureDetector(
-                                    onTap: canAdd
-                                        ? () => _addCardToDeck(card.id)
-                                        : null,
-                                    child: Stack(
-                                      children: [
-                                        Opacity(
-                                          opacity: canAdd ? 1.0 : 0.5,
-                                          child: CardWidget(
-                                            card: card,
-                                            width: 100,
-                                            height: 140,
-                                          ),
-                                        ),
-                                        if (inDeckCount > 0)
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: PixelTheme.pixelGreen,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: PixelTheme.pixelWhite,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '$inDeckCount',
-                                                style: PixelTheme.pixelTextBold(
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        if (!canAdd && inDeckCount < 3)
-                                          Positioned(
-                                            bottom: 4,
-                                            left: 4,
-                                            right: 4,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(2),
-                                              decoration: BoxDecoration(
-                                                color: PixelTheme.pixelRed
-                                                    .withOpacity(0.8),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                'DECK FULL',
-                                                style: PixelTheme.pixelText(
-                                                  fontSize: 8,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: PixelTheme.pixelGray,
-          border: Border(
-            top: BorderSide(color: PixelTheme.pixelWhite, width: 2),
+            ),
+            child: Row(children: [const SizedBox(width: 16)]),
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: PixelButton(
-                text: 'RESET',
-                onPressed: _resetDeck,
-                color: PixelTheme.pixelRed,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: PixelButton(
-                text: 'SAVE DECK',
-                onPressed: _workingDeck.isNotEmpty ? _saveDeck : null,
-                color: PixelTheme.pixelGreen,
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -312,15 +274,12 @@ class _DeckBuilderScreenState extends State<DeckBuilderScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: PixelTheme.pixelGray,
-        title: Text('Reset Deck?', style: PixelTheme.pixelTextBold()),
-        content: Text(
-          'This will remove all cards from your deck.',
-          style: PixelTheme.pixelText(color: PixelTheme.commonColor),
-        ),
+        title: Text('Reset Deck?'),
+        content: Text('This will remove all cards from your deck.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: PixelTheme.pixelText()),
+            child: Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -332,7 +291,7 @@ class _DeckBuilderScreenState extends State<DeckBuilderScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: PixelTheme.pixelRed,
             ),
-            child: Text('Reset', style: PixelTheme.pixelText()),
+            child: Text('Reset'),
           ),
         ],
       ),
@@ -346,10 +305,7 @@ class _DeckBuilderScreenState extends State<DeckBuilderScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Deck saved successfully!',
-            style: PixelTheme.pixelText(),
-          ),
+          content: Text('Deck saved successfully!'),
           backgroundColor: PixelTheme.pixelGreen,
           duration: const Duration(seconds: 2),
         ),

@@ -15,6 +15,13 @@ class GameProvider extends ChangeNotifier {
   Player? get player => _player;
   List<GameCard> get availableCards => _availableCards;
   bool get isLoading => _isLoading;
+  final List<String> _bootLogs = [];
+  List<String> get bootLogs => List.unmodifiable(_bootLogs);
+
+  void _log(String message) {
+    _bootLogs.add(message);
+    notifyListeners();
+  }
 
   List<GameCard> get playerCollection {
     if (_player == null) return [];
@@ -26,20 +33,29 @@ class GameProvider extends ChangeNotifier {
     return _cardService.getCardsByIds(_player!.deck);
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize({void Function(String message)? onStep}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
       // Initialize services
-      await _cardService.initialize();
-      _player = await _playerService.initialize();
+      void Function(String) reporter = (msg) {
+        _log(msg);
+        if (onStep != null) onStep(msg);
+      };
+
+      reporter('Boot: starting');
+      await _cardService.initialize(onStep: reporter);
+      _player = await _playerService.initialize(onStep: reporter);
       _availableCards = _cardService.allCards;
+      reporter('Boot: assets/cards loaded = ' + _availableCards.length.toString());
     } catch (e) {
       print('Error initializing game: $e');
+      _log('Error: ' + e.toString());
     }
 
     _isLoading = false;
+    _log('Boot: done');
     notifyListeners();
   }
 

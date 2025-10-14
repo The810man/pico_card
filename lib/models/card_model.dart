@@ -2,7 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'card_model.g.dart';
 
-enum CardRarity { common, rare, epic, legendary, broken }
+enum CardRarity { common, rare, epic, legendary, broken, none }
 
 enum CardType { creature, spell, artifact }
 
@@ -80,6 +80,8 @@ extension CardRarityExtension on CardRarity {
         return 'Legendary';
       case CardRarity.broken:
         return 'Broken';
+      default:
+        return "none";
     }
   }
 
@@ -88,13 +90,15 @@ extension CardRarityExtension on CardRarity {
       case CardRarity.common:
         return 70; // 70% chance
       case CardRarity.rare:
-        return 25; // 25% chance
+        return 15; // 25% chance
       case CardRarity.epic:
-        return 4; // 4% chance
+        return 1; // 4% chance
       case CardRarity.legendary:
-        return 1; // 1% chance
+        return 0.01; // 1% chance
       case CardRarity.broken:
-        return 0.01;
+        return 0.00001;
+      case CardRarity.none:
+        return 0;
     }
   }
 }

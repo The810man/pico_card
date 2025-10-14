@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' show useState;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer;
 import 'package:pixelarticons/pixel.dart';
 import 'package:provider/provider.dart';
+import 'package:nes_ui/nes_ui.dart';
 import '../models/card_model.dart';
 import '../services/game_provider.dart';
 import '../widgets/card_widget.dart';
@@ -83,9 +86,7 @@ class _CollectionScreenState extends State<CollectionScreen>
     return Consumer<GameProvider>(
       builder: (context, gameProvider, child) {
         if (gameProvider.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.yellow),
-          );
+          return const Center(child: NesPixelRowLoadingIndicator());
         }
 
         final collection = gameProvider.playerCollection;
@@ -115,74 +116,98 @@ class _CollectionScreenState extends State<CollectionScreen>
           );
         }
 
-        // Group cards by rarity for better display
-        final groupedCards = <CardRarity, List<GameCard>>{};
+        // Group cards by rarity, then aggregate duplicates by id with counts
+        final Map<CardRarity, Map<String, ({GameCard card, int count})>>
+        groupedCards = {};
         for (final card in collection) {
-          groupedCards.putIfAbsent(card.rarity, () => []).add(card);
+          groupedCards.putIfAbsent(card.rarity, () => {});
+          final rarityMap = groupedCards[card.rarity]!;
+          if (rarityMap.containsKey(card.id)) {
+            final entry = rarityMap[card.id]!;
+            rarityMap[card.id] = (card: entry.card, count: entry.count + 1);
+          } else {
+            rarityMap[card.id] = (card: card, count: 1);
+          }
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Collection stats
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: CardRarity.values.map((rarity) {
-                    final count = groupedCards[rarity]?.length ?? 0;
-                    return Column(
-                      children: [
-                        Text(
-                          '$count',
-                          style: TextStyle(
-                            color: _getRarityColor(rarity),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+              NesContainer(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: CardRarity.values.map((rarity) {
+                      final count = groupedCards[rarity]?.length ?? 0;
+                      return Column(
+                        children: [
+                          Text(
+                            '$count',
+                            style: TextStyle(
+                              color: _getRarityColor(rarity),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          rarity.displayName,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 10,
+                          Text(
+                            rarity.displayName,
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 10,
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
               // Cards by rarity
               ...CardRarity.values.map((rarity) {
-                final cards = groupedCards[rarity] ?? [];
-                if (cards.isEmpty) return const SizedBox.shrink();
+                final rarityMap = groupedCards[rarity] ?? {};
+                if (rarityMap.isEmpty) return const SizedBox.shrink();
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      rarity.displayName,
-                      style: TextStyle(
-                        color: _getRarityColor(rarity),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    NesContainer(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Row(
+                          children: [
+                            NesIcon(
+                              iconData: NesIcons.sun,
+                              primaryColor: _getRarityColor(rarity),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              rarity.displayName,
+                              style: TextStyle(
+                                color: _getRarityColor(rarity),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     StaggeredGrid.count(
                       crossAxisCount: 3,
-                      children: cards
+                      children: rarityMap.values
                           .map(
-                            (card) => _buildCollectionCard(card, gameProvider),
+                            (entry) => _buildCollectionCardWithCount(
+                              entry.card,
+                              entry.count,
+                              gameProvider,
+                            ),
                           )
                           .toList(),
                     ),
@@ -210,39 +235,38 @@ class _CollectionScreenState extends State<CollectionScreen>
         final collection = gameProvider.playerCollection;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Deck info
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.style, color: Colors.yellow),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Current Deck: ${deck.length}/30 cards',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+              NesContainer(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.style, color: Colors.yellow),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Current Deck: ${deck.length}/30 cards',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: deck.length >= 3
-                          ? () => _showDeckBuilderDialog(context, gameProvider)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
+                      const Spacer(),
+                      NesButton(
+                        onPressed: deck.length >= 3
+                            ? () =>
+                                  _showDeckBuilderDialog(context, gameProvider)
+                            : null,
+                        type: deck.length >= 3
+                            ? NesButtonType.primary
+                            : NesButtonType.warning,
+                        child: const Text('Edit Deck'),
                       ),
-                      child: const Text('Edit Deck'),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -269,16 +293,22 @@ class _CollectionScreenState extends State<CollectionScreen>
                   ),
                 )
               else
-                StaggeredGrid.count(
-                  crossAxisCount: 3,
-                  children: deck
-                      .map(
-                        (card) => CardWidget(
-                          card: card,
-                          onTap: () => _showCardDetails(context, card),
-                        ),
-                      )
-                      .toList(),
+                HookConsumer(
+                  builder: (context, ref, child) {
+                    final showBack = useState(false);
+                    return StaggeredGrid.count(
+                      crossAxisCount: 3,
+                      children: deck
+                          .map(
+                            (card) => CardWidget(
+                              showBack: showBack,
+                              card: card,
+                              onTap: () => _showCardDetails(context, card),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
                 ),
             ],
           ),
@@ -292,10 +322,56 @@ class _CollectionScreenState extends State<CollectionScreen>
       (deckCard) => deckCard.id == card.id,
     );
 
-    return CardWidget(
-      card: card,
-      onTap: () => _showCardDetails(context, card),
-      isSelected: isInDeck,
+    return HookConsumer(
+      builder: (context, ref, child) {
+        final showBack = useState(false);
+        return CardWidget(
+          showBack: showBack,
+          card: card,
+          onTap: () => _showCardDetails(context, card),
+          isSelected: isInDeck,
+        );
+      },
+    );
+  }
+
+  Widget _buildCollectionCardWithCount(
+    GameCard card,
+    int count,
+    GameProvider gameProvider,
+  ) {
+    final base = _buildCollectionCard(card, gameProvider);
+    if (count <= 1) return base;
+    return Stack(
+      children: [
+        base,
+        Positioned(
+          top: 2,
+          left: 2,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.yellow, width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(Pixel.imagemultiple, size: 10, color: Colors.yellow),
+                const SizedBox(width: 2),
+                Text(
+                  'x$count',
+                  style: const TextStyle(
+                    color: Colors.yellow,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -310,7 +386,17 @@ class _CollectionScreenState extends State<CollectionScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CardWidget(card: card, width: 200, height: 280),
+              HookConsumer(
+                builder: (context, ref, child) {
+                  final showBack = useState(false);
+                  return CardWidget(
+                    card: card,
+                    width: 200,
+                    height: 280,
+                    showBack: showBack,
+                  );
+                },
+              ),
               const SizedBox(height: 16),
               Text(
                 card.name,
@@ -391,6 +477,8 @@ class _CollectionScreenState extends State<CollectionScreen>
         return Colors.orange;
       case CardRarity.broken:
         return Colors.red;
+      default:
+        return Colors.black;
     }
   }
 }

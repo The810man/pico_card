@@ -13,7 +13,8 @@ class PlayerService {
 
   Player? get currentPlayer => _currentPlayer;
 
-  Future<Player> initialize() async {
+  Future<Player> initialize({void Function(String message)? onStep}) async {
+    onStep?.call('Player: initializing');
     final prefs = await SharedPreferences.getInstance();
     final String? playerJson = prefs.getString(_playerKey);
 
@@ -21,14 +22,18 @@ class PlayerService {
       try {
         final Map<String, dynamic> playerMap = json.decode(playerJson);
         _currentPlayer = Player.fromJson(playerMap);
+        onStep?.call('Player: loaded existing profile ' + _currentPlayer!.name);
       } catch (e) {
         print('Error loading player data: $e');
         _currentPlayer = await _createNewPlayer();
+        onStep?.call('Player: created new profile');
       }
     } else {
       _currentPlayer = await _createNewPlayer();
+      onStep?.call('Player: created new profile');
     }
 
+    onStep?.call('Player: ready');
     return _currentPlayer!;
   }
 

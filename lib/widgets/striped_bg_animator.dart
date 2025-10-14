@@ -53,6 +53,7 @@ class _InfiniteStripedBackgroundState extends State<InfiniteStripedBackground>
               width: horizontalTiles * tileWidth,
               height: verticalTiles * tileHeight,
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Transform.translate(
                     offset: Offset(-offsetX, -offsetY),

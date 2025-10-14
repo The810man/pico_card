@@ -28,22 +28,13 @@ class PlayerBannerWidget extends ConsumerWidget {
       height: height,
       child: Stack(
         children: [
-          Container(
-            width: width,
-            height: height,
-            child: Image.asset(
-              "assets/images/player_name_banner.png",
-              filterQuality: FilterQuality.none,
-              fit: BoxFit.fill,
-            ),
-          ),
           Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Icon(Pixel.user, size: 45, color: PixelTheme.brokenColor),
-                Text(name, style: PixelTheme.pixelText(fontSize: 20)),
+                Text(name),
               ],
             ),
           ),

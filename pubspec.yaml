@@ -44,6 +44,8 @@ dependencies:
   hooks_riverpod: ^2.6.1
   pixelarticons: ^0.4.0
   nes_ui: ^0.25.0
+  go_router: ^16.2.4
+  flutter_hooks: ^0.21.3+1
 
 dev_dependencies:
   flutter_test:
@@ -64,9 +66,13 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/card_manifest.json
     - assets/images/
+    - assets/arenaGifs/
+    - assets/UI/
     - assets/images/cards/
     - assets/images/cards/base_tower/
+    - assets/images/cards/love_letter/
     - assets/images/cards/some_bus/
     - assets/images/cards/chunky_tank/
     - assets/images/cards/toasty_toaster/

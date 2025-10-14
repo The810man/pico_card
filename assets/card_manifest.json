@@ -1,0 +1,9 @@
+[
+    "lib/data/cards/broken/unfinished_geometry.json",
+    "lib/data/cards/common/pico_warrior.json",
+    "lib/data/cards/common/toasty_toaster.json",
+    "lib/data/cards/epic/chunky_tank.json",
+    "lib/data/cards/legendary/some_bus.json",
+    "lib/data/cards/rare/base_tower.json",
+    "lib/data/cards/broken/love_letter.json"
+]

@@ -1,0 +1,16 @@
+{
+  "id": "broken_001",
+  "name": "Love Letter",
+  "description": "A Letter from a Loved one, the cutest thing ever XOXO.",
+  "cost": 8,
+  "attack": 6,
+  "health": 9,
+  "rarity": "broken",
+  "type": "creature",
+  "imagePlaceholder": "assets/images/cards/love_letter/loveLetter.gif",
+  "gifPath": "assets/images/cards/love_letter/loveLetter.gif",
+  "abilities": [
+    "Love you INSTA WIN",
+    "Come to bed 50% luck boost"
+  ]
+}

@@ -1,8 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import '../models/card_model.dart';
 import '../models/player_model.dart';
+
+class AssetNode {
+  final String path;
+  final List<AssetNode> children;
+
+  AssetNode(this.path, [this.children = const []]);
+}
 
 class CardService {
   static final CardService _instance = CardService._internal();
@@ -12,38 +21,44 @@ class CardService {
   List<GameCard> _allCards = [];
   List<GameCard> get allCards => _allCards;
 
-  Future<void> initialize() async {
-    await _loadAllCards();
+  Future<void> initialize({void Function(String message)? onStep}) async {
+    onStep?.call('Cards: initializing');
+    await _loadAllCards(onStep: onStep);
+    onStep?.call('Cards: ready');
   }
 
-  Future<void> _loadAllCards() async {
+  Future<void> _loadAllCards({void Function(String message)? onStep}) async {
     _allCards = [];
 
-    // Load common cards
-    await _loadCard('lib/data/cards/common/pico_warrior.json');
-    await _loadCard('lib/data/cards/common/toasty_toaster.json');
+    // // Load common cards
+    // await _loadSingleCard('lib/data/cards/common/pico_warrior.json');
+    // await _loadSingleCard('lib/data/cards/common/toasty_toaster.json');
 
-    // Load rare cards
-    await _loadCard('lib/data/cards/rare/base_tower.json');
+    // // Load rare cards
+    // await _loadSingleCard('lib/data/cards/rare/base_tower.json');
 
-    // Load epic cards
-    await _loadCard('lib/data/cards/epic/chunky_tank.json');
+    // // Load epic cards
+    // await _loadSingleCard('lib/data/cards/epic/chunky_tank.json');
 
-    // Load legendary cards
-    await _loadCard('lib/data/cards/legendary/some_bus.json');
+    // // Load legendary cards
+    // await _loadSingleCard('lib/data/cards/legendary/some_bus.json');
 
-    // Load Broken cards
-    await _loadCard('lib/data/cards/broken/unfinished_geometry.json');
+    // // Load Broken cards
+    // await _loadSingleCard('lib/data/cards/broken/unfinished_geometry.json');
+    onStep?.call('Cards: loading manifest assets/card_manifest.json');
+    await loadAllCardsFromManifest(onStep: onStep);
   }
 
-  Future<void> _loadCard(String path) async {
+  Future<void> _loadSingleCard(String path, {void Function(String message)? onStep}) async {
     try {
       final String jsonString = await rootBundle.loadString(path);
       final Map<String, dynamic> jsonMap = json.decode(jsonString);
       final GameCard card = GameCard.fromJson(jsonMap);
       _allCards.add(card);
+      onStep?.call('Card loaded: ' + card.id + ' (' + card.name + ')');
     } catch (e) {
       print('Error loading card from $path: $e');
+      onStep?.call('Error: failed to load ' + path);
     }
   }
 
@@ -52,6 +67,22 @@ class CardService {
       return _allCards.firstWhere((card) => card.id == id);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<void> loadAllCardsFromManifest({void Function(String message)? onStep}) async {
+    // Load the manifest file
+    final manifestContent = await rootBundle.loadString(
+      'assets/card_manifest.json',
+    );
+    final List<String> cardPaths = List<String>.from(
+      json.decode(manifestContent),
+    );
+
+    // Go through each path and call _loadSingleCard
+    for (String path in cardPaths) {
+      onStep?.call('Loading card: ' + path);
+      await _loadSingleCard(path, onStep: onStep);
     }
   }
 

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer;
 import 'package:pixelarticons/pixel.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:provider/provider.dart';
 import '../models/player_model.dart';
 import '../services/game_provider.dart';
 import '../widgets/card_widget.dart';
 import '../screens/pack_opening_screen.dart';
 
-class ShopScreen extends StatelessWidget {
+class ShopScreen extends HookConsumerWidget {
   const ShopScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showBack = useState(false);
     return Scaffold(
       backgroundColor: Colors.black87,
       appBar: AppBar(
@@ -45,43 +49,63 @@ class ShopScreen extends StatelessWidget {
       body: Consumer<GameProvider>(
         builder: (context, gameProvider, child) {
           if (gameProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.yellow),
-            );
+            return const Center(child: NesPixelRowLoadingIndicator());
           }
 
           final packs = gameProvider.getAvailablePacks();
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Available Card Packs',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                NesContainer(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      children: [
+                        NesIcon(iconData: NesIcons.market),
+                        SizedBox(width: 8),
+                        Text(
+                          'Available Card Packs',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Card Packs
                 ...packs.map(
                   (pack) => _buildPackCard(context, pack, gameProvider),
                 ),
 
-                const SizedBox(height: 24),
-                const Text(
-                  'Preview Cards',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 16),
+                NesContainer(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      children: [
+                        NesIcon(iconData: NesIcons.gallery),
+                        SizedBox(width: 8),
+                        Text(
+                          'Preview Cards',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
                 // Preview some available cards
                 SizedBox(
@@ -93,7 +117,12 @@ class ShopScreen extends StatelessWidget {
                       final card = gameProvider.availableCards[index];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: CardWidget(card: card, width: 100, height: 140),
+                        child: CardWidget(
+                          card: card,
+                          width: 100,
+                          height: 140,
+                          showBack: showBack,
+                        ),
                       );
                     },
                   ),
@@ -113,100 +142,88 @@ class ShopScreen extends StatelessWidget {
   ) {
     final canAfford = (gameProvider.player?.coins ?? 0) >= pack.cost;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[700]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Pack icon
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: NesContainer(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Pack icon
+              Container(
+                width: 60,
+                height: 60,
                 color: Colors.purple[700],
-                borderRadius: BorderRadius.circular(8),
+                child: const Icon(Pixel.gift, color: Colors.white, size: 30),
               ),
-              child: const Icon(Pixel.gift, color: Colors.white, size: 30),
-            ),
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // Pack info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    pack.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    pack.description,
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${pack.cardCount} cards',
-                    style: TextStyle(
-                      color: Colors.grey[300],
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Price and buy button
-            Column(
-              children: [
-                Row(
+              // Pack info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Pixel.coin, color: Colors.yellow, size: 16),
-                    const SizedBox(width: 4),
                     Text(
-                      '${pack.cost}',
+                      pack.name,
                       style: const TextStyle(
-                        color: Colors.yellow,
-                        fontSize: 14,
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      pack.description,
+                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${pack.cardCount} cards',
+                      style: TextStyle(
+                        color: Colors.grey[300],
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: canAfford
-                      ? () =>
-                            _showPackOpeningDialog(context, pack, gameProvider)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canAfford
-                        ? Colors.green[700]
-                        : Colors.grey[600],
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+              ),
+
+              // Price and buy button
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Pixel.coin, color: Colors.yellow, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${pack.cost}',
+                        style: const TextStyle(
+                          color: Colors.yellow,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text(
-                    'BUY',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 8),
+                  NesButton(
+                    type: canAfford
+                        ? NesButtonType.normal
+                        : NesButtonType.warning,
+                    onPressed: canAfford
+                        ? () => _showPackOpeningDialog(
+                            context,
+                            pack,
+                            gameProvider,
+                          )
+                        : null,
+                    child: const Text('BUY'),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -246,7 +263,7 @@ class ShopScreen extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) =>
-                        PackOpeningScreen(pack: pack, openedCards: newCards),
+                        PackOpeningScreen(openedCards: newCards),
                   ),
                 );
               }

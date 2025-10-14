@@ -1,59 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:nes_ui/nes_ui.dart';
+import 'package:pico_card/utils/painters/pixel_pattern_painter.dart';
+import 'package:pico_card/widgets/flip_card_widget.dart';
 import 'package:pixelarticons/pixel.dart';
 import '../models/card_model.dart';
 import 'pixel_theme.dart';
 
-class CardWidget extends StatefulWidget {
+class CardWidget extends HookConsumerWidget {
   final GameCard card;
   final bool isSelected;
   final VoidCallback? onTap;
   final double? width;
   final double? height;
   final bool showDetails;
+  final ValueNotifier<bool> showBack;
 
-  const CardWidget({
-    Key? key,
+  CardWidget({
+    super.key,
     required this.card,
+    required this.showBack,
     this.isSelected = false,
     this.onTap,
     this.width,
     this.height,
     this.showDetails = true,
-  }) : super(key: key);
-
-  @override
-  State<CardWidget> createState() => _CardWidgetState();
-}
-
-class _CardWidgetState extends State<CardWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _glowAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _glowAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  });
 
   String getCardColorImagePath(CardRarity rarity) {
     switch (rarity) {
@@ -67,226 +41,229 @@ class _CardWidgetState extends State<CardWidget>
         return "assets/images/card_frame_legendary.png";
       case CardRarity.broken:
         return "assets/images/card_frame_broken.png";
+      default:
+        return "none";
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) {
-        setState(() => _isHovered = true);
-        _controller.forward();
-      },
-      onTapUp: (_) {
-        setState(() => _isHovered = false);
-        _controller.reverse();
-      },
-      onTapCancel: () {
-        setState(() => _isHovered = false);
-        _controller.reverse();
-      },
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Stack(
-              children: [
-                Container(
-                  width: widget.width ?? 120,
-                  height: widget.height ?? 160,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AnimationController controller = useAnimationController(
+      duration: const Duration(milliseconds: 200),
+    );
 
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Cost indicator
-                      Container(
-                        height: 20,
-                        color: _getRarityColor(widget.card.rarity),
-                        child: Center(
-                          child: Text(
-                            '${widget.card.cost}',
-                            style: PixelTheme.pixelTextBold(
-                              color: PixelTheme.pixelWhite,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
+    final _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
 
-                      // Card image
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          color: PixelTheme.pixelGray,
-                          child: Stack(
-                            children: [
-                              // Image or fallback pattern
-                              if (widget.card.imagePlaceholder.isNotEmpty &&
-                                  widget.card.gifPath.isNotEmpty)
-                                Stack(
-                                  children: [
-                                    _buildPixelPattern(),
-                                    Positioned.fill(
-                                      child: ClipRRect(
-                                        child: Image.asset(
-                                          widget.card.gifPath,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                return _buildFallbackImage();
-                                              },
+    final _glowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
+
+    final scaleAnimation = useAnimation(_scaleAnimation);
+    final glowAnimation = useAnimation(_glowAnimation);
+    final ValueNotifier<bool> isHovered = useState(false);
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        color: const Color.fromARGB(0, 112, 112, 112),
+        width: width,
+        height: height,
+        child: GestureDetector(
+          onTap: onTap,
+          onTapDown: (_) {
+            isHovered.value = false;
+            controller.forward();
+          },
+          onTapUp: (_) {
+            isHovered.value = false;
+            controller.reverse();
+          },
+          onTapCancel: () {
+            isHovered.value = false;
+            controller.reverse();
+          },
+          child: AnimatedBuilder(
+            animation: controller,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _scaleAnimation.value,
+
+                child: NesContainer(
+                  borderColor: Colors.transparent,
+                  padding: EdgeInsets.all(0),
+                  width: width ?? 120,
+                  height: height ?? 160,
+                  child: FlipCardWidget(
+                    showBack: showBack,
+                    front: !showBack.value
+                        ? Padding(
+                            padding: const EdgeInsets.all(0),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  color: Colors.transparent,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      // Cost indicator
+                                      Container(
+                                        height: 20,
+                                        color: _getRarityColor(card.rarity),
+                                        child: Center(
+                                          child: Text('${card.cost}'),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                _buildFallbackImage(),
-                              // Rarity badge
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 2,
+
+                                      // Card image
+                                      Expanded(
+                                        flex: 3,
+                                        child: Container(
+                                          color: PixelTheme.pixelGray,
+                                          child: Stack(
+                                            children: [
+                                              // Image or fallback pattern
+                                              if (card
+                                                      .imagePlaceholder
+                                                      .isNotEmpty &&
+                                                  card.gifPath.isNotEmpty)
+                                                Stack(
+                                                  children: [
+                                                    _buildPixelPattern(
+                                                      glowAnimation,
+                                                    ),
+                                                    Positioned.fill(
+                                                      child: ClipRRect(
+                                                        child: Image.asset(
+                                                          card.gifPath,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder:
+                                                              (
+                                                                context,
+                                                                error,
+                                                                stackTrace,
+                                                              ) {
+                                                                return _buildFallbackImage(
+                                                                  glowAnimation,
+                                                                );
+                                                              },
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              else
+                                                _buildFallbackImage(
+                                                  glowAnimation,
+                                                ),
+                                              // Rarity badge
+                                              Positioned(
+                                                top: 4,
+                                                right: 4,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2,
+                                                      ),
+
+                                                  child: Text(
+                                                    card.rarity.displayName
+                                                        .substring(0, 1),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  decoration: PixelTheme.pixelContainer(
-                                    color: _getRarityColor(widget.card.rarity),
-                                    borderColor: PixelTheme.pixelWhite,
-                                    borderWidth: 1,
-                                  ),
-                                  child: Text(
-                                    widget.card.rarity.displayName.substring(
-                                      0,
-                                      1,
+                                ),
+                                Image.asset(
+                                  getCardColorImagePath(card.rarity),
+                                  filterQuality: FilterQuality.none,
+                                  scale: 0.25,
+                                ),
+                                if (showDetails) ...[
+                                  // Card name
+                                  Positioned(
+                                    top: 10,
+                                    left: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      color: const Color.fromARGB(
+                                        0,
+                                        10,
+                                        10,
+                                        10,
+                                      ),
+                                      child: Text(
+                                        card.name,
+
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    style: PixelTheme.pixelTextBold(
-                                      color: PixelTheme.pixelWhite,
-                                      fontSize: 8,
+                                  ),
+
+                                  // Stats
+                                ],
+
+                                Positioned(
+                                  bottom: 15,
+                                  right: 10,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Icon(Pixel.zap),
+                                        Text("${card.attack}"),
+                                        Icon(Pixel.heart),
+                                        Text('${card.health}'),
+                                      ],
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                              ],
+                            ),
+                          )
+                        : SizedBox.shrink(),
+                    back: Image.asset("assets/UI/cardBacksideGame.png"),
                   ),
                 ),
-                Image.asset(
-                  getCardColorImagePath(widget.card.rarity),
-                  filterQuality: FilterQuality.none,
-                  scale: 0.25,
-                ),
-                if (widget.showDetails) ...[
-                  // Card name
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      color: const Color.fromARGB(0, 10, 10, 10),
-                      child: Text(
-                        widget.card.name,
-                        style: PixelTheme.pixelTextBold(
-                          color: PixelTheme.pixelWhite,
-                          fontSize: 6,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-
-                  // Stats
-                ],
-                if (widget.card.type == CardType.creature)
-                  Positioned(
-                    left: 5,
-                    bottom: 15,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // Attack
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-
-                          child: Row(
-                            children: [
-                              Icon(Pixel.zap),
-                              Text(
-                                '${widget.card.attack}',
-                                style: PixelTheme.pixelTextBold(
-                                  color: const Color.fromARGB(255, 32, 32, 32),
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Health
-                      ],
-                    ),
-                  ),
-                Positioned(
-                  bottom: 15,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(Pixel.heart),
-                        Text(
-                          '${widget.card.health}',
-                          style: PixelTheme.pixelTextBold(
-                            color: const Color.fromARGB(255, 27, 27, 27),
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildFallbackImage() {
+  Widget _buildFallbackImage(glowAnimation) {
     return Stack(
       children: [
         // Pixel pattern background
-        _buildPixelPattern(),
+        _buildPixelPattern(glowAnimation),
         // Card type icon
         Center(
           child: Container(
             padding: const EdgeInsets.all(8),
-            decoration: PixelTheme.pixelContainer(
-              color: PixelTheme.pixelBlack.withOpacity(0.7),
-              borderColor: _getRarityColor(widget.card.rarity),
-              borderWidth: 1,
-            ),
+
             child: Icon(
-              _getCardTypeIcon(widget.card.type),
+              _getCardTypeIcon(card.type),
               size: 32,
-              color: _getRarityColor(widget.card.rarity),
+              color: _getRarityColor(card.rarity),
             ),
           ),
         ),
@@ -294,12 +271,12 @@ class _CardWidgetState extends State<CardWidget>
     );
   }
 
-  Widget _buildPixelPattern() {
+  Widget _buildPixelPattern(glowAnimation) {
     return Positioned.fill(
       child: CustomPaint(
         painter: PixelPatternPainter(
-          rarity: widget.card.rarity,
-          animationValue: _glowAnimation.value,
+          rarity: card.rarity,
+          animationValue: glowAnimation,
         ),
       ),
     );
@@ -317,6 +294,8 @@ class _CardWidgetState extends State<CardWidget>
         return PixelTheme.legendaryColor;
       case CardRarity.broken:
         return PixelTheme.brokenColor;
+      default:
+        return Colors.black;
     }
   }
 
@@ -328,54 +307,6 @@ class _CardWidgetState extends State<CardWidget>
         return Pixel.zap;
       case CardType.artifact:
         return Icons.diamond;
-    }
-  }
-}
-
-class PixelPatternPainter extends CustomPainter {
-  final CardRarity rarity;
-  final double animationValue;
-
-  PixelPatternPainter({required this.rarity, required this.animationValue});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = _getRarityColor(
-        rarity,
-      ).withOpacity(0.1 + (animationValue * 0.2))
-      ..strokeWidth = 1
-      ..style = PaintingStyle.fill;
-
-    // Create pixel pattern
-    const pixelSize = 4.0;
-    for (double x = 0; x < size.width; x += pixelSize * 2) {
-      for (double y = 0; y < size.height; y += pixelSize * 2) {
-        if ((x + y) % (pixelSize * 4) == 0) {
-          canvas.drawRect(Rect.fromLTWH(x, y, pixelSize, pixelSize), paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return oldDelegate is PixelPatternPainter &&
-        oldDelegate.animationValue != animationValue;
-  }
-
-  Color _getRarityColor(CardRarity rarity) {
-    switch (rarity) {
-      case CardRarity.common:
-        return PixelTheme.commonColor;
-      case CardRarity.rare:
-        return PixelTheme.rareColor;
-      case CardRarity.epic:
-        return PixelTheme.epicColor;
-      case CardRarity.legendary:
-        return PixelTheme.legendaryColor;
-      case CardRarity.broken:
-        return PixelTheme.brokenColor;
     }
   }
 }
