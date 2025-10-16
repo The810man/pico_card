@@ -7,7 +7,9 @@
   "health": 3,
   "rarity": "common",
   "type": "creature",
-  "imagePlaceholder": "assets/images/cards/pico_warrior_static.png",
-  "gifPath": "assets/images/cards/pico_warrior_animated.gif",
-  "abilities": ["Charge: Can attack immediately when played"]
+  "imagePlaceholder": "assets/images/cards/toasty_toaster/animated_toasty_toaster.gif",
+  "gifPath": "assets/images/cards/toasty_toaster/animated_toasty_toaster.gif",
+  "abilities": [
+    "Charge: Can attack immediately when played"
+  ]
 }

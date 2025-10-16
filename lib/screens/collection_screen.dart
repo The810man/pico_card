@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:nes_ui/nes_ui.dart';
 import '../models/card_model.dart';
 import '../services/game_provider.dart';
-import '../widgets/card_widget.dart';
+import '../widgets/cards/card_widget.dart';
 
 class CollectionScreen extends StatefulWidget {
   const CollectionScreen({Key? key}) : super(key: key);

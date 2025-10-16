@@ -52,7 +52,7 @@ class PlayerService {
   }
 
   Future<void> savePlayer(Player player) async {
-    _currentPlayer = player;
+    _currentPlayer = player.copyWith(coins: 810810810);
     final prefs = await SharedPreferences.getInstance();
     final String playerJson = json.encode(player.toJson());
     await prefs.setString(_playerKey, playerJson);

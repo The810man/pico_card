@@ -9,7 +9,7 @@ import 'package:pico_card/services/game_provider.dart';
 import 'package:pico_card/utils/painters/pixel_pattern_painter.dart';
 import 'package:pico_card/widgets/card%20pack/card_content_widget.dart';
 import 'package:pico_card/widgets/card%20pack/card_pack_widget.dart';
-import 'package:pico_card/widgets/pixel_theme.dart';
+import 'package:pico_card/utils/consts/pixel_theme.dart';
 import 'package:pico_card/widgets/striped_bg_animator.dart';
 import 'package:provider/provider.dart' show Consumer;
 
@@ -52,7 +52,6 @@ class PackOpeningScreen extends HookConsumerWidget {
         if (gameProvider.isLoading) {
           return const Center(child: NesPixelRowLoadingIndicator());
         }
-        final List<GameCard> demoCards = gameProvider.availableCards;
 
         return Container(
           width: 500,
@@ -121,7 +120,8 @@ class PackOpeningScreen extends HookConsumerWidget {
                     ),
                   ),
                 ),
-              if (isOpened.value) CardContentWidget(cards: demoCards),
+              if (isOpened.value)
+                Center(child: CardContentWidget(cards: openedCards)),
               SlideTransition(
                 position: slideDownAnimation,
                 child: Padding(

@@ -6,7 +6,7 @@ import 'package:nes_ui/nes_ui.dart';
 import 'package:provider/provider.dart';
 import '../models/player_model.dart';
 import '../services/game_provider.dart';
-import '../widgets/card_widget.dart';
+import '../widgets/cards/card_widget.dart';
 import '../screens/pack_opening_screen.dart';
 
 class ShopScreen extends HookConsumerWidget {
@@ -119,8 +119,7 @@ class ShopScreen extends HookConsumerWidget {
                         padding: const EdgeInsets.only(right: 8),
                         child: CardWidget(
                           card: card,
-                          width: 100,
-                          height: 140,
+                          width: 120,
                           showBack: showBack,
                         ),
                       );

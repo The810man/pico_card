@@ -46,6 +46,7 @@ dependencies:
   nes_ui: ^0.25.0
   go_router: ^16.2.4
   flutter_hooks: ^0.21.3+1
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,7 @@ flutter:
     - assets/card_manifest.json
     - assets/images/
     - assets/arenaGifs/
+    - assets/audio/
     - assets/UI/
     - assets/images/cards/
     - assets/images/cards/base_tower/

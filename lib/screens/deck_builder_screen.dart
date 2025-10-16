@@ -4,8 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer, Provider;
 import 'package:provider/provider.dart';
 import '../models/card_model.dart';
 import '../services/game_provider.dart';
-import '../widgets/card_widget.dart';
-import '../widgets/pixel_theme.dart';
+import '../widgets/cards/card_widget.dart';
+import '../utils/consts/pixel_theme.dart';
 
 class DeckBuilderScreen extends StatefulWidget {
   const DeckBuilderScreen({Key? key}) : super(key: key);

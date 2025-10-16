@@ -1,2 +1,8 @@
-const int startCoins = 810;
-const int startingMana = 3;
+const int VALUE_INITIAL_COINS = 810;
+const int VALUE_INITIAL_TROPHYS = 0;
+
+const int VALUE_PLAYER_MANA = 333;
+const int VALUE_PLAYER_HEALTH = 20;
+const int VALUE_ENEMY_HEALTH = 20;
+const int VALUE_ENEMY_MANA = 3;
+const int VALUE_MAX_MANA = 10;

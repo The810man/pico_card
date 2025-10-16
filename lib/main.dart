@@ -4,13 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 
 import 'package:nes_ui/nes_ui.dart';
+import 'package:pico_card/services/audio_controller.dart';
 import 'package:pico_card/widgets/home_widget.dart';
 
 import 'package:pixelarticons/pixel.dart';
 import 'package:provider/provider.dart';
 import 'services/game_provider.dart';
 
-import 'widgets/pixel_theme.dart';
+import 'utils/consts/pixel_theme.dart';
 
 void main() {
   debugPrintBeginFrameBanner = false;
@@ -146,6 +147,7 @@ class MainMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    AudioRepository();
     return Scaffold(
       backgroundColor: Colors.black87,
       appBar: AppBar(
@@ -159,7 +161,15 @@ class MainMenuScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [Text("810"), Icon(Pixel.coin)],
+        actions: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(children: [Text("810"), Icon(Pixel.coin)]),
+              Row(children: [Text("70"), Icon(Pixel.trophy)]),
+            ],
+          ),
+        ],
       ),
       body: Consumer<GameProvider>(
         builder: (context, gameProvider, child) {

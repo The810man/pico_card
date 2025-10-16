@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pico_card/models/card_model.dart';
-import 'package:pico_card/widgets/pixel_theme.dart';
+import 'package:pico_card/utils/consts/pixel_theme.dart';
 
 class PixelPatternPainter extends CustomPainter {
   final CardRarity rarity;

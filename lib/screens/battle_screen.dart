@@ -1,149 +1,123 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' show useState, useEffect;
+import 'package:flutter_riverpod/flutter_riverpod.dart' show WidgetRef;
+import 'package:hooks_riverpod/hooks_riverpod.dart' show HookConsumerWidget;
 import 'package:nes_ui/nes_ui.dart';
-import 'package:pico_card/main.dart';
-import 'package:pico_card/utils/consts/game_enums.dart';
+import 'package:pico_card/services/battle_provider.dart';
+import 'package:pico_card/services/game_provider.dart';
+import 'package:pico_card/utils/enums/game_enums.dart';
 import 'package:pico_card/utils/delay_tool.dart';
-import 'package:pico_card/widgets/draggable_card.dart';
-import 'package:pico_card/widgets/hoverable_card_holder.dart';
+import 'package:pico_card/widgets/battle/background_widget.dart';
+import 'package:pico_card/widgets/battle/game_pause_overlay_widget.dart';
+import 'package:pico_card/widgets/battle/game_stat_widget.dart';
+import 'package:pico_card/widgets/battle/pause_btn_widget.dart';
+import 'package:pico_card/widgets/battle/player_cardslot_row_widget.dart';
+import 'package:pico_card/widgets/cards/draggable_card.dart';
+import 'package:provider/provider.dart' show Consumer;
 
 class BattleScreen extends HookConsumerWidget {
+  const BattleScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ValueNotifier<PauseState> pauseState = useState(PauseState.none);
     final showBack_0 = useState(true);
     final showBack_1 = useState(true);
     final showBack_2 = useState(true);
+    final List<ValueNotifier<bool>> showBackList = [
+      showBack_0,
+      showBack_1,
+      showBack_2,
+    ];
 
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await ref.read(delayProvider).delay(Duration(seconds: 1));
-        showBack_0.value = false;
-        await ref.read(delayProvider).delay(Duration(milliseconds: 500));
-        showBack_1.value = false;
-        await ref.read(delayProvider).delay(Duration(milliseconds: 500));
-        showBack_2.value = false;
+        for (ValueNotifier<bool> item in showBackList) {
+          await ref.read(delayProvider).delay(Duration(seconds: 1));
+          item.value = false;
+        }
       });
       return null;
     }, []);
-    return NesContainer(
-      padding: EdgeInsets.all(1),
-      child: Stack(
-        children: [
-          NesContainer(
-            width: double.infinity,
-            height: double.infinity,
-            padding: EdgeInsets.all(4),
-            child: Image.asset(
-              "assets/UI/BattleScreenBackground.png",
-              filterQuality: FilterQuality.none,
-              fit: BoxFit.cover,
-            ),
-          ),
 
-          Positioned(
-            bottom: 0,
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  DraggableCard(showBack: showBack_0),
-                  DraggableCard(showBack: showBack_1),
-                  DraggableCard(showBack: showBack_2),
-                ],
-              ),
-            ),
-          ),
+    // Gets the BattleProvider for actions
+    final BattleState battle = ref.watch(battleProvider); // Reads BattleState
+    final BattleProvider battleController = ref.watch(battleProvider.notifier);
+    return Consumer<GameProvider>(
+      builder: (context, gameProvider, child) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          battleController.generateLibary(gameProvider);
+        });
+        return NesContainer(
+          padding: EdgeInsets.all(1),
+          child: Stack(
+            children: [
+              BackgroundWidget(),
 
-          Positioned(
-            right: 0,
-            left: 0,
-            bottom: MediaQuery.of(context).size.height * 0.2,
-            child: Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  HoverableCardHolder(),
-                  HoverableCardHolder(),
-                  HoverableCardHolder(),
-                ],
-              ),
-            ),
-          ),
-          if (pauseState.value != PauseState.none &&
-              pauseState.value != PauseState.gamePause)
-            Positioned(
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                padding: EdgeInsets.all(4),
-                child: Image.asset(
-                  pauseState.value == PauseState.enemyPause
-                      ? "assets/UI/BattleUiEnemyPause.png"
-                      : "assets/UI/BattleUiplayerPause.png",
-                  filterQuality: FilterQuality.none,
-                  fit: BoxFit.cover,
+              Positioned(
+                bottom: 12,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(
+                      battle.cardLibaryList.length,
+                      (int index) => DraggableCard(
+                        canAfford:
+                            battle.playerMana >=
+                            battle.cardLibaryList[index].cost,
+                        battleProvider: battleController,
+                        showBack: showBackList[index],
+                        card: battle.cardLibaryList[index],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.5 - 30,
-            child: NesButton.icon(
-              type: NesButtonType.warning,
-              icon: pauseState.value != PauseState.gamePause
-                  ? NesIcons.pause
-                  : NesIcons.play,
-              onPressed: () {
-                pauseState.value = PauseState.gamePause;
-                NesDialog.show(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return SizedBox(
-                      height: 150,
-                      width: 300,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("paused game"),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              NesButton(
-                                type: NesButtonType.success,
-                                child: Text("End Battle"),
-                                onPressed: () =>
-                                    Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                        builder: (context) => MainMenuScreen(),
-                                      ),
-                                      (route) => false,
-                                    ),
-                              ),
+              PlayerCardslotRowWidget(battleProvider: battleController),
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.44,
+                right: 5,
+                child: GameStatWidget(
+                  mana: battle.enemyMana,
+                  health: battle.enemyLife,
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.54,
+                right: 5,
+                child: GameStatWidget(
+                  mana: battle.playerMana,
+                  health: battle.playerLife,
+                ),
+              ),
 
-                              NesButton(
-                                type: NesButtonType.normal,
-                                child: Text("continue"),
-                                onPressed: () => Navigator.of(context).pop(),
-                              ),
-                            ],
-                          ),
-                        ],
+              ///everyting above is over the pause screen
+              GamePauseOverlayWidget(turn: battle.turn),
+
+              ///everything below is under the pause and cannot be touched when its not ur turn
+              PauseBtnWidget(pauseState: pauseState),
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.5 - 15,
+                right: 0,
+                child: battle.turn == TurnType.player
+                    ? NesButton.text(
+                        type: NesButtonType.success,
+                        text: "end turn",
+                        onPressed: () {
+                          battleController.endTurn();
+                        },
+                      )
+                    : NesButton.text(
+                        type: NesButtonType.error,
+                        text: "enemy turn",
                       ),
-                    );
-                  },
-                ).then((_) {
-                  pauseState.value = PauseState.none;
-                });
-              },
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
