@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/services/audio_controller.dart';
@@ -16,6 +17,14 @@ import 'utils/consts/pixel_theme.dart';
 void main() {
   debugPrintBeginFrameBanner = false;
   debugPrintEndFrameBanner = false;
+  WidgetsFlutterBinding.ensureInitialized();
+  MobileAds.instance.initialize();
+
+  final testDeviceIds = ['AF7F69CC6C308A0AF093E911B9EB3018'];
+  final requestConfiguration = RequestConfiguration(
+    testDeviceIds: testDeviceIds,
+  );
+  MobileAds.instance.updateRequestConfiguration(requestConfiguration);
   runApp(riverpod.ProviderScope(child: const PicoCardApp()));
 }
 

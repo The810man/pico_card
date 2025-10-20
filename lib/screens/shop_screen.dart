@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer;
+import 'package:pico_card/widgets/rewarded_button.dart';
 import 'package:pixelarticons/pixel.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:provider/provider.dart';
@@ -84,6 +85,8 @@ class ShopScreen extends HookConsumerWidget {
                 ...packs.map(
                   (pack) => _buildPackCard(context, pack, gameProvider),
                 ),
+
+                RewardedAdButton(),
 
                 const SizedBox(height: 16),
                 NesContainer(
