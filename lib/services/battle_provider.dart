@@ -61,13 +61,19 @@ class BattleProvider extends StateNotifier<BattleState> {
         ),
       );
 
-  void endTurn() {
+  void endTurn(GameProvider gameData) {
     if (state.turn == TurnType.player) {
-      state = state.copyWith(turn: TurnType.enemy);
+      state = state.copyWith(
+        turn: TurnType.enemy,
+        playerMana: state.playerMana + 1,
+      );
+      if (state.cardLibaryList.length < 3) {
+        addCardToLibary(gameData);
+      }
     } else {
       state = state.copyWith(
         turn: TurnType.player,
-        playerMana: VALUE_PLAYER_MANA,
+        enemyMana: state.enemyMana + 1,
       );
     }
   }

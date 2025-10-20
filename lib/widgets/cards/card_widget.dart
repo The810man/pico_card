@@ -23,6 +23,8 @@ class CardWidget extends HookConsumerWidget {
   final bool showStats;
   final bool canAfford;
   final bool showHealth;
+  final bool isTapped;
+  final bool isPlaced;
 
   CardWidget({
     super.key,
@@ -36,6 +38,8 @@ class CardWidget extends HookConsumerWidget {
     this.showStats = false,
     this.canAfford = false,
     this.showHealth = false,
+    this.isTapped = true,
+    this.isPlaced = false,
   });
 
   @override
@@ -59,12 +63,12 @@ class CardWidget extends HookConsumerWidget {
         overlayEntry.value = OverlayEntry(
           builder: (context) => Center(
             child: Positioned(
-              // top: MediaQuery.of(context).size.height * 0.3,
-              // left: MediaQuery.of(context).size.width * 0.1,
-              // right: MediaQuery.of(context).size.width * 0.1,
               child: Material(
                 color: Colors.transparent,
-                child: NesDialog(child: CardDialogInfoWidget(card: card)),
+                child: NesDialog(
+                  showCloseButton: false,
+                  child: CardDialogInfoWidget(card: card),
+                ),
               ),
             ),
           ),
@@ -87,18 +91,30 @@ class CardWidget extends HookConsumerWidget {
         child: GestureDetector(
           onTap: onTap,
           onLongPressStart: (_) {
+            if (isPlaced) {
+              showBack.value = false;
+            }
             isHovered.value = true;
             controller.forward();
+
             showOverlayDialog();
           },
           onLongPressEnd: (_) {
+            if (isPlaced) {
+              showBack.value = true;
+            }
             isHovered.value = false;
             controller.reverse();
+
             removeOverlayDialog();
           },
           onLongPressCancel: () {
+            if (isPlaced) {
+              showBack.value = true;
+            }
             isHovered.value = false;
             controller.reverse();
+
             removeOverlayDialog();
           },
           child: AnimatedBuilder(

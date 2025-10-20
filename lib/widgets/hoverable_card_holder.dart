@@ -16,6 +16,9 @@ class HoverableCardHolder extends HookConsumerWidget {
     final ValueNotifier<bool> isHovering = useState(false);
     final ValueNotifier<GameCard?> selectedCard = useState(null);
     final ValueNotifier<bool> showBack = useState(false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showBack.value = true;
+    });
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (data) => isHovering.value = true,
       onLeave: (data) => isHovering.value = false,
@@ -47,6 +50,7 @@ class HoverableCardHolder extends HookConsumerWidget {
                           card: selectedCard.value!,
                           showBack: showBack,
                           showHealth: true,
+                          isPlaced: true,
                           showStats: true,
                         ),
                 ),

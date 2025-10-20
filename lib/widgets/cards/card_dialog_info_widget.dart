@@ -16,7 +16,7 @@ class CardDialogInfoWidget extends ConsumerWidget {
         "Health: ${card.health.toString()}\n",
         "Attack: ${card.attack.toString()} \n",
         "Cost: ${card.cost.toString()} \n",
-        "Abilitys: ${card.abilities} \n",
+        //"Abilitys: ${card.abilities} \n",
         "Description: ${card.description}\n",
         "Rarity: ${card.rarity.displayName}\n",
       ],

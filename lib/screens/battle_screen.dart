@@ -24,6 +24,7 @@ class BattleScreen extends HookConsumerWidget {
     final showBack_0 = useState(true);
     final showBack_1 = useState(true);
     final showBack_2 = useState(true);
+    final didCardGenerate = useState(false);
     final List<ValueNotifier<bool>> showBackList = [
       showBack_0,
       showBack_1,
@@ -46,7 +47,10 @@ class BattleScreen extends HookConsumerWidget {
     return Consumer<GameProvider>(
       builder: (context, gameProvider, child) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          battleController.generateLibary(gameProvider);
+          if (!didCardGenerate.value) {
+            battleController.generateLibary(gameProvider);
+            didCardGenerate.value = true;
+          }
         });
         return NesContainer(
           padding: EdgeInsets.all(1),
@@ -106,7 +110,7 @@ class BattleScreen extends HookConsumerWidget {
                         type: NesButtonType.success,
                         text: "end turn",
                         onPressed: () {
-                          battleController.endTurn();
+                          battleController.endTurn(gameProvider);
                         },
                       )
                     : NesButton.text(
