@@ -19,6 +19,7 @@ class GameCard {
   final String imagePlaceholder;
   final String gifPath; // For future GIF implementation
   final List<String> abilities;
+  final bool isTapped;
 
   const GameCard({
     required this.id,
@@ -31,6 +32,7 @@ class GameCard {
     required this.type,
     required this.imagePlaceholder,
     required this.gifPath,
+    this.isTapped = true,
     this.abilities = const [],
   });
 
@@ -50,6 +52,7 @@ class GameCard {
     String? imagePlaceholder,
     String? gifPath,
     List<String>? abilities,
+    bool? isTapped,
   }) {
     return GameCard(
       id: id ?? this.id,
@@ -63,6 +66,7 @@ class GameCard {
       imagePlaceholder: imagePlaceholder ?? this.imagePlaceholder,
       gifPath: gifPath ?? this.gifPath,
       abilities: abilities ?? this.abilities,
+      isTapped: isTapped ?? this.isTapped,
     );
   }
 }

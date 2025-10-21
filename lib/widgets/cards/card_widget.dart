@@ -91,7 +91,7 @@ class CardWidget extends HookConsumerWidget {
         child: GestureDetector(
           onTap: onTap,
           onLongPressStart: (_) {
-            if (isPlaced) {
+            if (isPlaced && isTapped) {
               showBack.value = false;
             }
             isHovered.value = true;
@@ -100,7 +100,7 @@ class CardWidget extends HookConsumerWidget {
             showOverlayDialog();
           },
           onLongPressEnd: (_) {
-            if (isPlaced) {
+            if (isPlaced && isTapped) {
               showBack.value = true;
             }
             isHovered.value = false;
@@ -109,7 +109,7 @@ class CardWidget extends HookConsumerWidget {
             removeOverlayDialog();
           },
           onLongPressCancel: () {
-            if (isPlaced) {
+            if (isPlaced && isTapped) {
               showBack.value = true;
             }
             isHovered.value = false;

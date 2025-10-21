@@ -3,8 +3,10 @@ import 'package:flutter_hooks/flutter_hooks.dart' show useState, useEffect;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show WidgetRef;
 import 'package:hooks_riverpod/hooks_riverpod.dart' show HookConsumerWidget;
 import 'package:nes_ui/nes_ui.dart';
-import 'package:pico_card/services/battle_provider.dart';
-import 'package:pico_card/services/game_provider.dart';
+import 'package:pico_card/models/card_model.dart';
+import 'package:pico_card/services/providers/battle_deck_providers.dart';
+import 'package:pico_card/services/providers/battle_provider.dart';
+import 'package:pico_card/services/providers/game_provider.dart';
 import 'package:pico_card/utils/enums/game_enums.dart';
 import 'package:pico_card/utils/delay_tool.dart';
 import 'package:pico_card/widgets/battle/background_widget.dart';
@@ -44,6 +46,8 @@ class BattleScreen extends HookConsumerWidget {
     // Gets the BattleProvider for actions
     final BattleState battle = ref.watch(battleProvider); // Reads BattleState
     final BattleProvider battleController = ref.watch(battleProvider.notifier);
+    final List<GameCard> enemyDeck = ref.watch(enemyGameCardListProvider);
+    final List<GameCard> playerDeck = ref.watch(playerGameCardListProvider);
     return Consumer<GameProvider>(
       builder: (context, gameProvider, child) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -66,14 +70,14 @@ class BattleScreen extends HookConsumerWidget {
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: List.generate(
-                      battle.cardLibaryList.length,
+                      battle.cardLibaryListPlayer.length,
                       (int index) => DraggableCard(
                         canAfford:
                             battle.playerMana >=
-                            battle.cardLibaryList[index].cost,
+                            battle.cardLibaryListPlayer[index].cost,
                         battleProvider: battleController,
                         showBack: showBackList[index],
-                        card: battle.cardLibaryList[index],
+                        card: battle.cardLibaryListPlayer[index],
                       ),
                     ),
                   ),

@@ -11,3 +11,5 @@ enum ArenaNames {
 }
 
 enum TurnType { player, enemy, none }
+
+enum BotActions { pass, attack, place }

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import '../models/card_model.dart';
-import '../models/player_model.dart';
-import 'card_service.dart';
-import 'player_service.dart';
+import '../../models/card_model.dart';
+import '../../models/player_model.dart';
+import '../card_service.dart';
+import '../player_service.dart';
 
 class GameProvider extends ChangeNotifier {
   final CardService _cardService = CardService();
@@ -48,7 +48,9 @@ class GameProvider extends ChangeNotifier {
       await _cardService.initialize(onStep: reporter);
       _player = await _playerService.initialize(onStep: reporter);
       _availableCards = _cardService.allCards;
-      reporter('Boot: assets/cards loaded = ' + _availableCards.length.toString());
+      reporter(
+        'Boot: assets/cards loaded = ' + _availableCards.length.toString(),
+      );
     } catch (e) {
       print('Error initializing game: $e');
       _log('Error: ' + e.toString());
@@ -72,7 +74,7 @@ class GameProvider extends ChangeNotifier {
 
       // Open pack and add cards to collection
       final List<GameCard> newCards = _cardService.openCardPack(pack);
-      
+
       for (final card in newCards) {
         _player = await _playerService.addCardToCollection(card.id);
       }
@@ -89,7 +91,7 @@ class GameProvider extends ChangeNotifier {
     try {
       // Get the cards that will be opened BEFORE buying
       final List<GameCard> newCards = _cardService.openCardPack(pack);
-      
+
       // Deduct coins
       _player = await _playerService.buyCardPack(pack.cost);
 

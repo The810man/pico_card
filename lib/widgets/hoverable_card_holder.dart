@@ -16,13 +16,36 @@ class HoverableCardHolder extends HookConsumerWidget {
     final ValueNotifier<bool> isHovering = useState(false);
     final ValueNotifier<GameCard?> selectedCard = useState(null);
     final ValueNotifier<bool> showBack = useState(false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showBack.value = true;
-    });
+    useEffect(
+      () {
+        final card = selectedCard.value;
+
+        if (card == null) return null;
+        showBack.value = card.isTapped;
+        // Runs when the selected card itself changes or when its `health` changes.
+        // Replace this body with whatever side-effect you need.
+        if (card.health <= 0) {
+          // example action: clear the selection when card dies
+          selectedCard.value = null;
+          showBack.value = false;
+        } else {
+          // example action: log the new health
+          debugPrint('Selected card ${card.id} health: ${card.health}');
+        }
+        return null;
+      },
+      [
+        selectedCard.value?.id,
+        selectedCard.value?.health,
+        selectedCard.value?.isTapped,
+      ],
+    );
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (data) => isHovering.value = true,
       onLeave: (data) => isHovering.value = false,
       onAcceptWithDetails: (data) {
+        showBack.value = data.data.isTapped;
+
         isHovering.value = false;
         selectedCard.value = data.data;
         battleProvider.usePlayerMana(data.data.cost);
