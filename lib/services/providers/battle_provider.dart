@@ -25,6 +25,8 @@ class BattleState {
   final GameCard? enemyTargetCard;
   // Stars per placed card id (0..5)
   final Map<String, int> starLevels;
+  // Player slot assignment per placed-card id (0..2)
+  final Map<String, int> playerSlotIndex;
 
   BattleState({
     required this.playerMana,
@@ -44,6 +46,7 @@ class BattleState {
     this.enemyAttackingCard,
     this.enemyTargetCard,
     required this.starLevels,
+    required this.playerSlotIndex,
   });
 
   BattleState copyWith({
@@ -64,6 +67,7 @@ class BattleState {
     GameCard? enemyAttackingCard,
     GameCard? enemyTargetCard,
     Map<String, int>? starLevels,
+    Map<String, int>? playerSlotIndex,
   }) {
     return BattleState(
       playerMana: playerMana ?? this.playerMana,
@@ -84,6 +88,7 @@ class BattleState {
       enemyAttackingCard: enemyAttackingCard ?? this.enemyAttackingCard,
       enemyTargetCard: enemyTargetCard ?? this.enemyTargetCard,
       starLevels: starLevels ?? this.starLevels,
+      playerSlotIndex: playerSlotIndex ?? this.playerSlotIndex,
     );
   }
 }
@@ -127,6 +132,7 @@ class BattleProvider extends StateNotifier<BattleState> {
           enemyAttacking: false,
           enemyAttackingCard: null,
           starLevels: const {},
+          playerSlotIndex: const {},
         ),
       );
 
@@ -262,6 +268,31 @@ class BattleProvider extends StateNotifier<BattleState> {
     state = state.copyWith(cardPlacedListPlayer: updatedPlayerCards);
   }
 
+  // Place at a specific player slot index (0..2), preserving slot selection.
+  // Mana should be handled by the caller.
+  void placeCardAtSlot(GameCard card, int slotIndex) {
+    if (state.cardPlacedListPlayer.length >= 3) {
+      return;
+    }
+    final String uniqueSuffix =
+        '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
+    final GameCard placed = card.copyWith(
+      id: '${card.id}__$uniqueSuffix',
+      isTapped: true,
+    );
+    final List<GameCard> updatedPlayerCards = [
+      ...state.cardPlacedListPlayer,
+      placed,
+    ];
+    final Map<String, int> updatedPositions = Map<String, int>.from(
+      state.playerSlotIndex,
+    )..[placed.id] = slotIndex.clamp(0, 2);
+    state = state.copyWith(
+      cardPlacedListPlayer: updatedPlayerCards,
+      playerSlotIndex: updatedPositions,
+    );
+  }
+
   void damagePlayer(int amount) {
     final life = (state.playerLife - amount).clamp(0, VALUE_PLAYER_HEALTH);
     state = state.copyWith(playerLife: life);
@@ -309,7 +340,13 @@ class BattleProvider extends StateNotifier<BattleState> {
         final List<GameCard> updatedPlayerCards = state.cardPlacedListPlayer
             .where((card) => card.id != targetCard.id)
             .toList();
-        state = state.copyWith(cardPlacedListPlayer: updatedPlayerCards);
+        final Map<String, int> updatedPositions = Map<String, int>.from(
+          state.playerSlotIndex,
+        )..remove(targetCard.id);
+        state = state.copyWith(
+          cardPlacedListPlayer: updatedPlayerCards,
+          playerSlotIndex: updatedPositions,
+        );
       } else {
         final List<GameCard> updatedPlayerCards = state.cardPlacedListPlayer
             .map((card) => card.id == targetCard.id ? updatedTarget : card)
@@ -356,6 +393,7 @@ class BattleProvider extends StateNotifier<BattleState> {
       enemyAttackingCard: null,
       enemyTargetCard: null,
       starLevels: const {},
+      playerSlotIndex: const {},
     );
   }
 
@@ -476,6 +514,13 @@ class BattleProvider extends StateNotifier<BattleState> {
         enemyTargetCard: null,
       );
       damagePlayer(card.attack);
+
+      // Ensure the attacking enemy card is tapped after attacking directly
+      final List<GameCard> updatedEnemyCards = state.cardPlacedListEnemy
+          .map((c) => c.id == card.id ? card.copyWith(isTapped: true) : c)
+          .toList();
+      state = state.copyWith(cardPlacedListEnemy: updatedEnemyCards);
+
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted) {
           state = state.copyWith(
@@ -566,6 +611,19 @@ class BattleProvider extends StateNotifier<BattleState> {
     state = state.copyWith(attackMode: false, selectedAttackingCard: null);
   }
 
+  // Cancels attack and ensures the selected card is untapped if it didn't attack
+  void cancelAttackModeAndUntap() {
+    final GameCard? sel = state.selectedAttackingCard;
+    if (sel != null) {
+      // Untap only if the placed card with the same id is currently tapped
+      final List<GameCard> updatedPlaced = state.cardPlacedListPlayer
+          .map((c) => c.id == sel.id ? c.copyWith(isTapped: false) : c)
+          .toList();
+      state = state.copyWith(cardPlacedListPlayer: updatedPlaced);
+    }
+    state = state.copyWith(attackMode: false, selectedAttackingCard: null);
+  }
+
   void attackCard(GameCard targetCard) {
     if (!state.attackMode || state.selectedAttackingCard == null) return;
     if (state.turn != TurnType.player) return;
@@ -590,22 +648,103 @@ class BattleProvider extends StateNotifier<BattleState> {
   }
 
   void botEnemyTurn(GameProvider gameData) {
-    // Use a timer to add delays without blocking the UI
-    Future.delayed(Duration(milliseconds: 1000), () {
-      if (mounted) {
-        botPlaceSegment();
+    // Run phases sequentially with small delays, allowing multiple actions per phase
+    Future(() async {
+      if (!mounted) return;
 
-        Future.delayed(Duration(milliseconds: 500), () {
-          if (mounted) {
-            botAttackSegment();
+      // Thinking time so the bot doesn't act instantly
+      await Future.delayed(const Duration(seconds: 1));
 
-            Future.delayed(Duration(milliseconds: 500), () {
-              if (mounted) {
-                endTurn(gameData);
+      // Placement phase: try multiple placements while affordable and slots available
+      int safety = 0;
+      while (mounted &&
+          state.cardPlacedListEnemy.length < 3 &&
+          state.cardLibaryListEnemy.isNotEmpty &&
+          botCanAffordCards()) {
+        final GameCard card = botGetRandomAffordableCard();
+
+        // Create unique placed copy, starts tapped (summoning sickness)
+        final String uniqueSuffix =
+            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
+        final GameCard placed = card.copyWith(
+          id: '${card.id}__$uniqueSuffix',
+          isTapped: true,
+        );
+
+        final List<GameCard> updatedEnemyCards = [
+          ...state.cardPlacedListEnemy,
+          placed,
+        ];
+        final List<GameCard> updatedLibrary = state.cardLibaryListEnemy
+            .where((c) => c.id != card.id)
+            .toList();
+
+        state = state.copyWith(
+          cardPlacedListEnemy: updatedEnemyCards,
+          cardLibaryListEnemy: updatedLibrary,
+          enemyMana: state.enemyMana - card.cost,
+        );
+
+        safety++;
+        // Random stop to avoid always exhausting resources
+        if (safety > 3 && Random().nextBool()) break;
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      // Upgrade phase: may perform multiple upgrades if affordable
+      safety = 0;
+      while (mounted) {
+        // Build affordable upgrade candidates
+        final List<MapEntry<GameCard, GameCard>> candidates = [];
+        for (final placed in state.cardPlacedListEnemy) {
+          final int currentStars = starsFor(placed.id);
+          if (currentStars >= 5) continue;
+
+          for (final incoming in state.cardLibaryListEnemy) {
+            if (baseIdOf(placed.id) == baseIdOf(incoming.id)) {
+              final int cost = incoming.cost + currentStars + 1;
+              if (state.enemyMana >= cost) {
+                candidates.add(MapEntry(placed, incoming));
               }
-            });
+            }
           }
-        });
+        }
+
+        if (candidates.isEmpty) break;
+
+        final choice = candidates[Random().nextInt(candidates.length)];
+        // Perform upgrade (+1/+1 and star)
+        enemyUpgradeCard(choice.key, choice.value);
+
+        // Consume the used library card
+        final List<GameCard> newLib = state.cardLibaryListEnemy
+            .where((c) => c.id != choice.value.id)
+            .toList();
+        state = state.copyWith(cardLibaryListEnemy: newLib);
+
+        safety++;
+        if (safety > 2 && Random().nextBool()) break;
+        await Future.delayed(const Duration(milliseconds: 250));
+      }
+
+      // Attack phase: attack with multiple untapped cards in sequence
+      safety = 0;
+      while (mounted) {
+        final List<GameCard> untapped = state.cardPlacedListEnemy
+            .where((c) => !c.isTapped)
+            .toList();
+        if (untapped.isEmpty) break;
+
+        final GameCard attacker = untapped[Random().nextInt(untapped.length)];
+        botAttkWithCard(attacker);
+
+        safety++;
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (safety > 6) break; // hard stop safety
+      }
+
+      if (mounted) {
+        endTurn(gameData);
       }
     });
   }
@@ -659,6 +798,77 @@ class BattleProvider extends StateNotifier<BattleState> {
     );
   }
 
+  // Enemy upgrade: mirror of player upgrade but uses enemy mana/slots
+  void enemyUpgradeCard(GameCard placedCard, GameCard incomingFromLib) {
+    if (!canUpgrade(placedCard, incomingFromLib)) return;
+
+    final currentStars = starsFor(placedCard.id);
+    final int upgradeCost = incomingFromLib.cost + currentStars + 1;
+    if (state.enemyMana < upgradeCost) return;
+
+    // Deduct enemy mana
+    state = state.copyWith(enemyMana: state.enemyMana - upgradeCost);
+
+    // Apply stat increases (+1 attack, +1 health per upgrade)
+    final GameCard upgraded = placedCard.copyWith(
+      attack: placedCard.attack + 1,
+      health: placedCard.health + 1,
+    );
+
+    // Replace placed card instance in ENEMY list
+    final List<GameCard> updatedPlaced = state.cardPlacedListEnemy
+        .map((c) => c.id == placedCard.id ? upgraded : c)
+        .toList();
+
+    // Update starLevels keyed by this placed instance id
+    final Map<String, int> updatedStars = Map<String, int>.from(
+      state.starLevels,
+    )..update(placedCard.id, (v) => v + 1, ifAbsent: () => 1);
+
+    state = state.copyWith(
+      cardPlacedListEnemy: updatedPlaced,
+      starLevels: updatedStars,
+    );
+  }
+
+  // Bot upgrade segment: randomly tries to upgrade one enemy card if possible
+  void botUpgradeSegment() {
+    final bool shouldUpgrade = Random().nextBool();
+    if (!shouldUpgrade) return;
+
+    if (state.cardPlacedListEnemy.isEmpty ||
+        state.cardLibaryListEnemy.isEmpty) {
+      return;
+    }
+
+    // Build candidate pairs (placed, incomingFromLib) that match and are affordable
+    final List<MapEntry<GameCard, GameCard>> candidates = [];
+    for (final placed in state.cardPlacedListEnemy) {
+      final int currentStars = starsFor(placed.id);
+      if (currentStars >= 5) continue;
+
+      for (final incoming in state.cardLibaryListEnemy) {
+        if (baseIdOf(placed.id) == baseIdOf(incoming.id)) {
+          final int cost = incoming.cost + currentStars + 1;
+          if (state.enemyMana >= cost) {
+            candidates.add(MapEntry(placed, incoming));
+          }
+        }
+      }
+    }
+
+    if (candidates.isEmpty) return;
+
+    final choice = candidates[Random().nextInt(candidates.length)];
+    // Perform upgrade
+    enemyUpgradeCard(choice.key, choice.value);
+    // Remove used library card from enemy library
+    final List<GameCard> newLib = state.cardLibaryListEnemy
+        .where((c) => c.id != choice.value.id)
+        .toList();
+    state = state.copyWith(cardLibaryListEnemy: newLib);
+  }
+
   // Replace a placed card with a new one from the library.
   // Refund the cost of the recycled card, and pay the cost of the incoming card.
   // New placed card starts tapped and resets stars for that slot.
@@ -688,10 +898,20 @@ class BattleProvider extends StateNotifier<BattleState> {
       state.starLevels,
     )..remove(slotCard.id);
 
+    // Transfer slot assignment from old placed id to the new one
+    final Map<String, int> updatedPositions = Map<String, int>.from(
+      state.playerSlotIndex,
+    );
+    final int? slot = updatedPositions.remove(slotCard.id);
+    if (slot != null) {
+      updatedPositions[placed.id] = slot;
+    }
+
     state = state.copyWith(
       cardPlacedListPlayer: updatedPlaced,
       playerMana: newMana,
       starLevels: updatedStars,
+      playerSlotIndex: updatedPositions,
     );
   }
 

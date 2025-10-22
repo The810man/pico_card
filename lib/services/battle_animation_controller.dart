@@ -17,9 +17,12 @@ class BattleAnimationController {
     bool targetDies = false,
     bool showDamageIndicator = true,
   }) {
-    showDialog(
+    // Use root navigator and make it dismissible to avoid input lock if something goes wrong.
+    // Also attach a timeout fallback to ensure the dialog cannot get stuck.
+    final dialogFuture = showDialog<void>(
       context: context,
-      barrierDismissible: false,
+      useRootNavigator: true,
+      barrierDismissible: true,
       barrierColor: Colors.transparent,
       builder: (context) => Material(
         color: Colors.transparent,
@@ -58,6 +61,20 @@ class BattleAnimationController {
           ],
         ),
       ),
+    );
+
+    // Fail-safe: if the dialog did not close for any reason, auto-close it after ~1.8s.
+    dialogFuture.timeout(
+      const Duration(milliseconds: 1800),
+      onTimeout: () {
+        if (context.mounted) {
+          final nav = Navigator.of(context, rootNavigator: true);
+          if (nav.canPop()) {
+            nav.pop();
+          }
+        }
+        return null;
+      },
     );
   }
 

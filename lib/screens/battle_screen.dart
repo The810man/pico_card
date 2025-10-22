@@ -131,7 +131,7 @@ class BattleScreen extends HookConsumerWidget {
                               type: NesButtonType.warning,
                               text: "Cancel Attack",
                               onPressed: () {
-                                battleController.cancelAttackMode();
+                                battleController.cancelAttackModeAndUntap();
                               },
                             )
                           else

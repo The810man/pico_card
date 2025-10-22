@@ -47,6 +47,7 @@ class EnemyCardslotRowWidget extends ConsumerWidget {
                       // Show enemy health/attack indicators
                       showStats: true,
                       isEnemy: true,
+                      stars: (battle.starLevels[enemyDeck[index].id] ?? 0),
                       onTap: battle.attackMode
                           ? () {
                               final attacking = battle.selectedAttackingCard;

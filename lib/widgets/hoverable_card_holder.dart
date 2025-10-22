@@ -10,7 +10,10 @@ import 'package:pico_card/widgets/cards/card_widget.dart';
 
 class HoverableCardHolder extends HookConsumerWidget {
   final GameCard? initialCard;
-  const HoverableCardHolder({super.key, this.initialCard});
+  // Optional slot index this holder represents (0..2). When provided and the
+  // slot is empty, drops will place the card specifically into this slot.
+  final int? slotIndex;
+  const HoverableCardHolder({super.key, this.initialCard, this.slotIndex});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -199,14 +202,21 @@ class HoverableCardHolder extends HookConsumerWidget {
         // Remove the dragged library card now (id-based, safe if already removed)
         battleController.removeCardFromLibary(incoming);
         battleController.usePlayerMana(incoming.cost);
-        battleController.addCardToPlayerPlaced(incoming);
+
+        // If this holder represents a concrete slot, place exactly there.
+        // Otherwise fall back to default append placement.
+        if (slotIndex != null) {
+          battleController.placeCardAtSlot(incoming, slotIndex!);
+        } else {
+          battleController.addCardToPlayerPlaced(incoming);
+        }
+
         // Release drag claim after successful placement
         battleController.releaseDrag(incoming.id);
 
         // Do not set local selectedCard here.
         // Let the parent row rebuild and supply the placed card for this slot
         // to avoid rendering the same card twice (local + parent-driven).
-        battleController.releaseDrag(incoming.id);
       },
       builder:
           (
