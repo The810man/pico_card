@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' show useState;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart' hide Consumer;
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pixelarticons/pixel.dart';
-import 'package:provider/provider.dart';
 import 'package:nes_ui/nes_ui.dart';
 import '../models/card_model.dart';
-import '../services/game_provider.dart';
+import '../services/providers/game_provider.dart';
 import '../widgets/cards/card_widget.dart';
 
 class CollectionScreen extends StatefulWidget {
@@ -53,8 +53,9 @@ class _CollectionScreenState extends State<CollectionScreen>
           unselectedLabelColor: Colors.grey[400],
         ),
         actions: [
-          Consumer<GameProvider>(
-            builder: (context, gameProvider, child) {
+          riverpod.Consumer(
+            builder: (context, ref, child) {
+              final gameNotifier = ref.watch(gameProvider);
               return Container(
                 padding: const EdgeInsets.all(8),
                 child: Row(
@@ -62,7 +63,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                     const Icon(Pixel.imagemultiple, color: Colors.blue),
                     const SizedBox(width: 4),
                     Text(
-                      '${gameProvider.playerCollection.length}',
+                      '${gameNotifier.playerCollection.length}',
                       style: const TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
@@ -83,13 +84,14 @@ class _CollectionScreenState extends State<CollectionScreen>
   }
 
   Widget _buildCollectionTab() {
-    return Consumer<GameProvider>(
-      builder: (context, gameProvider, child) {
-        if (gameProvider.isLoading) {
+    return riverpod.Consumer(
+      builder: (context, ref, child) {
+        final gameNotifier = ref.watch(gameProvider);
+        if (gameNotifier.isLoading) {
           return const Center(child: NesPixelRowLoadingIndicator());
         }
 
-        final collection = gameProvider.playerCollection;
+        final collection = gameNotifier.playerCollection;
 
         if (collection.isEmpty) {
           return Center(
@@ -206,7 +208,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                             (entry) => _buildCollectionCardWithCount(
                               entry.card,
                               entry.count,
-                              gameProvider,
+                              gameNotifier,
                             ),
                           )
                           .toList(),
@@ -223,16 +225,17 @@ class _CollectionScreenState extends State<CollectionScreen>
   }
 
   Widget _buildDeckTab() {
-    return Consumer<GameProvider>(
-      builder: (context, gameProvider, child) {
-        if (gameProvider.isLoading) {
+    return riverpod.Consumer(
+      builder: (context, ref, child) {
+        final gameNotifier = ref.watch(gameProvider);
+        if (gameNotifier.isLoading) {
           return const Center(
             child: CircularProgressIndicator(color: Colors.yellow),
           );
         }
 
-        final deck = gameProvider.playerDeck;
-        final collection = gameProvider.playerCollection;
+        final deck = gameNotifier.playerDeck;
+        final collection = gameNotifier.playerCollection;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(12),
@@ -257,8 +260,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                       const Spacer(),
                       NesButton(
                         onPressed: deck.length >= 3
-                            ? () =>
-                                  _showDeckBuilderDialog(context, gameProvider)
+                            ? () => _showDeckBuilderDialog(context)
                             : null,
                         type: deck.length >= 3
                             ? NesButtonType.primary
@@ -317,8 +319,8 @@ class _CollectionScreenState extends State<CollectionScreen>
     );
   }
 
-  Widget _buildCollectionCard(GameCard card, GameProvider gameProvider) {
-    final isInDeck = gameProvider.playerDeck.any(
+  Widget _buildCollectionCard(GameCard card, GameProvider gameNotifier) {
+    final isInDeck = gameNotifier.playerDeck.any(
       (deckCard) => deckCard.id == card.id,
     );
 
@@ -338,9 +340,9 @@ class _CollectionScreenState extends State<CollectionScreen>
   Widget _buildCollectionCardWithCount(
     GameCard card,
     int count,
-    GameProvider gameProvider,
+    GameProvider gameNotifier,
   ) {
-    final base = _buildCollectionCard(card, gameProvider);
+    final base = _buildCollectionCard(card, gameNotifier);
     if (count <= 1) return base;
     return Stack(
       children: [
@@ -442,7 +444,7 @@ class _CollectionScreenState extends State<CollectionScreen>
     );
   }
 
-  void _showDeckBuilderDialog(BuildContext context, GameProvider gameProvider) {
+  void _showDeckBuilderDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

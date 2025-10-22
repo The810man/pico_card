@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/models/card_model.dart';
 import 'package:pico_card/screens/battle_screen.dart';
@@ -7,12 +8,15 @@ import 'package:pico_card/screens/shop_screen.dart';
 import 'package:pico_card/widgets/player_banner_widget.dart';
 import 'package:pico_card/widgets/striped_bg_animator.dart';
 import 'package:pico_card/utils/painters/pixel_pattern_painter.dart';
+import 'package:pico_card/services/providers/settings_provider.dart';
 
 class HomeWidget extends ConsumerWidget {
   const HomeWidget({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settingsState = ref.watch(settingsProvider).state;
+
     return Stack(
       children: [
         InfiniteStripedBackground(),
@@ -22,7 +26,7 @@ class HomeWidget extends ConsumerWidget {
             child: Column(
               children: [
                 PlayerBannerWidget(
-                  name: "Super Gamer 123",
+                  name: settingsState.playerName,
                   money: 300,
                   width: double.infinity,
                   height: 80,
@@ -109,30 +113,26 @@ class HomeWidget extends ConsumerWidget {
                 NesButton(
                   type: NesButtonType.normal,
                   child: Row(children: [Text("Battle")]),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => BattleScreen()),
-                  ),
+                  onPressed: () => context.goNamed('battle'),
                 ),
                 const SizedBox(height: 16),
                 NesButton(
                   type: NesButtonType.primary,
                   child: Row(children: [Text("Deck Builder")]),
-                  onPressed: () {},
+                  onPressed: () => context.goNamed('deck_builder'),
                 ),
                 const SizedBox(height: 16),
                 NesButton(
                   type: NesButtonType.success,
                   child: Row(children: [Text("Shop")]),
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (context) => ShopScreen())),
+                  onPressed: () => context.goNamed('shop'),
                 ),
                 const SizedBox(height: 16),
 
                 NesButton(
                   type: NesButtonType.warning,
                   child: Row(children: [Text("Collection")]),
-                  onPressed: () {},
+                  onPressed: () => context.goNamed('collection'),
                 ),
               ],
             ),

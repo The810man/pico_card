@@ -10,6 +10,8 @@ import 'package:pico_card/widgets/cards/flip_card_widget.dart';
 import 'package:pixelarticons/pixel.dart';
 import '../../models/card_model.dart';
 import '../../utils/consts/pixel_theme.dart';
+import 'dart:ui' show Rect, Offset;
+import 'package:pico_card/services/providers/card_position_provider.dart';
 
 class CardWidget extends HookConsumerWidget {
   final GameCard card;
@@ -25,6 +27,9 @@ class CardWidget extends HookConsumerWidget {
   final bool showHealth;
   final bool isTapped;
   final bool isPlaced;
+  final bool isEnemy;
+  final int stars;
+  final VoidCallback? onAttack;
 
   CardWidget({
     super.key,
@@ -40,6 +45,9 @@ class CardWidget extends HookConsumerWidget {
     this.showHealth = false,
     this.isTapped = true,
     this.isPlaced = false,
+    this.isEnemy = false,
+    this.stars = 0,
+    this.onAttack,
   });
 
   @override
@@ -54,6 +62,45 @@ class CardWidget extends HookConsumerWidget {
     ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
 
     final ValueNotifier<bool> isHovered = useState(false);
+
+    // Track this card's on-screen rect for precise attack animations
+    final globalKey = useMemoized(() => GlobalKey());
+    void _updateRect() {
+      final ctx = globalKey.currentContext;
+      if (ctx == null) return;
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+
+      // Compute coordinates relative to the app's overlay so that
+      // Positioned(left/top) inside the dialog Stack aligns exactly.
+      final overlay = Navigator.of(ctx).overlay;
+      final overlayBox = overlay?.context.findRenderObject() as RenderBox?;
+      if (overlayBox == null) return;
+
+      final topLeftGlobal = box.localToGlobal(Offset.zero);
+      final topLeft = overlayBox.globalToLocal(topLeftGlobal);
+      final size = box.size;
+      final rect = Rect.fromLTWH(
+        topLeft.dx,
+        topLeft.dy,
+        size.width,
+        size.height,
+      );
+
+      if (isPlaced || isEnemy) {
+        ref.read(cardPositionProvider.notifier).updateCardRect(card.id, rect);
+      } else {
+        ref.read(cardPositionProvider.notifier).removeCard(card.id);
+      }
+    }
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _updateRect());
+      return () {
+        // Clean up when this card leaves the tree
+        ref.read(cardPositionProvider.notifier).removeCard(card.id);
+      };
+    }, [card.id, isPlaced, isEnemy]);
 
     // Overlay dialog handling
     final overlayEntry = useRef<OverlayEntry?>(null);
@@ -85,12 +132,16 @@ class CardWidget extends HookConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
+        key: globalKey,
         color: const Color.fromARGB(0, 112, 112, 112),
         width: width,
         height: height,
         child: GestureDetector(
           onTap: onTap,
           onLongPressStart: (_) {
+            // Disable long-press details/flip for enemy cards
+            if (isEnemy) return;
+
             if (isPlaced && isTapped) {
               showBack.value = false;
             }
@@ -100,6 +151,9 @@ class CardWidget extends HookConsumerWidget {
             showOverlayDialog();
           },
           onLongPressEnd: (_) {
+            // Disable long-press details/flip for enemy cards
+            if (isEnemy) return;
+
             if (isPlaced && isTapped) {
               showBack.value = true;
             }
@@ -109,6 +163,9 @@ class CardWidget extends HookConsumerWidget {
             removeOverlayDialog();
           },
           onLongPressCancel: () {
+            // Disable long-press details/flip for enemy cards
+            if (isEnemy) return;
+
             if (isPlaced && isTapped) {
               showBack.value = true;
             }
@@ -120,6 +177,10 @@ class CardWidget extends HookConsumerWidget {
           child: AnimatedBuilder(
             animation: controller,
             builder: (context, child) {
+              // Defer provider updates to post-frame to avoid modifying providers during build
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _updateRect();
+              });
               return Transform.scale(
                 scale: _scaleAnimation.value,
                 child: CardContentWidget(
@@ -128,6 +189,9 @@ class CardWidget extends HookConsumerWidget {
                   showHealth: showHealth,
                   showStats: showStats,
                   canAfford: canAfford,
+                  isEnemy: isEnemy,
+                  stars: stars,
+                  onAttack: onAttack,
                 ),
               );
             },

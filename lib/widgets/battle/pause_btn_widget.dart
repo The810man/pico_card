@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/main.dart';
 import 'package:pico_card/utils/enums/game_enums.dart';
@@ -36,19 +37,17 @@ class PauseBtnWidget extends ConsumerWidget {
                         NesButton(
                           type: NesButtonType.success,
                           child: Text("End Battle"),
-                          onPressed: () =>
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (context) => MainMenuScreen(),
-                                ),
-                                (route) => false,
-                              ),
+                          onPressed: () {
+                            if (context.mounted) {
+                              context.goNamed('main_menu');
+                            }
+                          },
                         ),
 
                         NesButton(
                           type: NesButtonType.normal,
                           child: Text("continue"),
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => context.pop(),
                         ),
                       ],
                     ),

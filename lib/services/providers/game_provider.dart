@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/card_model.dart';
 import '../../models/player_model.dart';
 import '../card_service.dart';
 import '../player_service.dart';
+
+final gameProvider = ChangeNotifierProvider((ref) => GameProvider());
 
 class GameProvider extends ChangeNotifier {
   final CardService _cardService = CardService();

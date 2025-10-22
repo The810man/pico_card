@@ -3,19 +3,57 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/models/card_model.dart';
-import 'package:pico_card/services/battle_provider.dart';
+import 'package:pico_card/services/providers/battle_provider.dart';
+import 'package:pico_card/services/battle_animation_controller.dart';
 import 'package:pico_card/widgets/cards/card_stats_widget.dart';
 import 'package:pico_card/widgets/cards/card_widget.dart';
 
 class HoverableCardHolder extends HookConsumerWidget {
-  final BattleProvider battleProvider;
-  const HoverableCardHolder({super.key, required this.battleProvider});
+  final GameCard? initialCard;
+  const HoverableCardHolder({super.key, this.initialCard});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ValueNotifier<bool> isHovering = useState(false);
-    final ValueNotifier<GameCard?> selectedCard = useState(null);
+    final ValueNotifier<GameCard?> selectedCard = useState(initialCard);
     final ValueNotifier<bool> showBack = useState(false);
+    final ValueNotifier<bool> canUpgradeHover = useState(false);
+    final ValueNotifier<bool> canReplaceHover = useState(false);
+
+    // Pulse animation when card is selected for attack
+    final AnimationController pulseCtrl = useAnimationController(
+      duration: const Duration(milliseconds: 500),
+    );
+    final Animation<double> pulseScale = Tween<double>(
+      begin: 1.0,
+      end: 1.06,
+    ).animate(CurvedAnimation(parent: pulseCtrl, curve: Curves.easeInOut));
+
+    // Get the current battle state to check for card updates
+    final battle = ref.watch(battleProvider);
+    final battleController = ref.watch(battleProvider.notifier);
+
+    // No longer syncing with battle state here, as initialCard is passed in
+    // and onAcceptWithDetails updates selectedCard.
+
+    // Drive pulse animation only while in attack mode for this selected card
+    useEffect(
+      () {
+        final bool shouldPulse =
+            battle.attackMode &&
+            selectedCard.value != null &&
+            !selectedCard.value!.isTapped;
+        if (shouldPulse) {
+          pulseCtrl.repeat(reverse: true);
+        } else {
+          pulseCtrl.stop();
+          pulseCtrl.reset();
+        }
+        return null;
+      },
+      [battle.attackMode, selectedCard.value?.id, selectedCard.value?.isTapped],
+    );
+
     useEffect(
       () {
         final card = selectedCard.value;
@@ -41,14 +79,100 @@ class HoverableCardHolder extends HookConsumerWidget {
       ],
     );
     return DragTarget<GameCard>(
-      onWillAcceptWithDetails: (data) => isHovering.value = true,
-      onLeave: (data) => isHovering.value = false,
-      onAcceptWithDetails: (data) {
-        showBack.value = data.data.isTapped;
+      onWillAcceptWithDetails: (details) {
+        isHovering.value = true;
+
+        final incoming = details.data;
+        final battleState = ref.read(battleProvider);
+        final placed = selectedCard.value;
+
+        // Slot empty: accept if we can place (basic cost check)
+        if (placed == null) {
+          final canPlace =
+              battleState.playerMana >= incoming.cost &&
+              battleState.cardPlacedListPlayer.length < 3;
+          canUpgradeHover.value = false;
+          return canPlace;
+        }
+
+        // Slot occupied: check for upgrade or replace
+        final currentStars = battleState.starLevels[placed.id] ?? 0;
+        final upgradeCost = incoming.cost + currentStars + 1;
+
+        final base = ref.read(battleProvider.notifier);
+        final bool baseMatch =
+            base.baseIdOf(placed.id) == base.baseIdOf(incoming.id);
+        final bool canUpg =
+            baseMatch &&
+            currentStars < 5 &&
+            battleState.playerMana >= upgradeCost;
+
+        // Can replace if it's a different card and player can afford it
+        final bool canReplace =
+            !baseMatch && battleState.playerMana >= incoming.cost;
+
+        canUpgradeHover.value = canUpg;
+        canReplaceHover.value = canReplace; // Set this for visual feedback
+        return canUpg || canReplace;
+      },
+      onLeave: (data) {
+        isHovering.value = false;
+        canUpgradeHover.value = false;
+      },
+      onAcceptWithDetails: (details) {
+        final incoming = details.data;
+        final placed = selectedCard.value;
 
         isHovering.value = false;
-        selectedCard.value = data.data;
-        battleProvider.usePlayerMana(data.data.cost);
+        canUpgradeHover.value = false; // Clear hover state
+        canReplaceHover.value = false; // Clear hover state
+
+        if (placed != null) {
+          // Check if it's an upgrade or a replacement
+          final base = ref.read(battleProvider.notifier);
+          final bool baseMatch =
+              base.baseIdOf(placed.id) == base.baseIdOf(incoming.id);
+
+          if (baseMatch) {
+            // Attempt upgrade path (already validated in onWillAccept)
+            battleController.upgradeCard(placed, incoming);
+            // Keep selection on the upgraded card
+            final latestPlaced = ref
+                .read(battleProvider)
+                .cardPlacedListPlayer
+                .where((c) => c.id == placed.id)
+                .firstOrNull;
+            if (latestPlaced != null) {
+              selectedCard.value = latestPlaced;
+              showBack.value = latestPlaced.isTapped;
+            }
+          } else {
+            // Attempt replace path (already validated in onWillAccept)
+            battleController.replaceCard(placed, incoming);
+            // After replacing, select the just-placed instance (with the new runtime id)
+            final placedList = ref.read(battleProvider).cardPlacedListPlayer;
+            if (placedList.isNotEmpty) {
+              // Find the newly placed card (it will have the incoming.id as its base)
+              final newCard = placedList.firstWhere(
+                (c) => base.baseIdOf(c.id) == base.baseIdOf(incoming.id),
+              );
+              selectedCard.value = newCard;
+              showBack.value = newCard.isTapped; // true on place
+            }
+          }
+          return;
+        }
+
+        // Placement path for empty slot
+        battleController.usePlayerMana(incoming.cost);
+        battleController.addCardToPlayerPlaced(incoming);
+
+        // After placing, select the just-placed instance (with the new runtime id)
+        final placedList = ref.read(battleProvider).cardPlacedListPlayer;
+        if (placedList.isNotEmpty) {
+          selectedCard.value = placedList.last;
+          showBack.value = placedList.last.isTapped; // true on place
+        }
       },
       builder:
           (
@@ -69,21 +193,64 @@ class HoverableCardHolder extends HookConsumerWidget {
                           filterQuality: FilterQuality.none,
                           fit: BoxFit.contain,
                         )
-                      : CardWidget(
-                          card: selectedCard.value!,
-                          showBack: showBack,
-                          showHealth: true,
-                          isPlaced: true,
-                          showStats: true,
+                      : AnimatedBuilder(
+                          animation: pulseCtrl,
+                          builder: (context, child) {
+                            final bool pulsing =
+                                battle.attackMode &&
+                                selectedCard.value != null &&
+                                !selectedCard.value!.isTapped;
+                            final double scale = pulsing
+                                ? pulseScale.value
+                                : 1.0;
+
+                            return Transform.scale(
+                              scale: scale,
+                              child: CardWidget(
+                                card: selectedCard.value!,
+                                showBack: showBack,
+                                showHealth: true,
+                                isPlaced: true,
+                                showStats: true,
+                                stars:
+                                    (battle.starLevels[selectedCard
+                                        .value!
+                                        .id] ??
+                                    0),
+                                onAttack: () {
+                                  // Handle attack logic with animation
+                                  final card = selectedCard.value!;
+                                  if (card.isTapped) return;
+
+                                  // Start attack mode instead of direct attack
+                                  battleController.startAttackMode(card);
+                                },
+                              ),
+                            );
+                          },
                         ),
                 ),
-                if (isHovering.value && selectedCard.value != null)
+                if (isHovering.value &&
+                    selectedCard.value != null &&
+                    canUpgradeHover.value)
                   Center(
                     child: NesPulser(
-                      child: NesIcon(
-                        iconData: NesIcons.redo,
-                        primaryColor: Colors.white,
-                        size: Size(25, 25),
+                      child: Icon(
+                        Icons.star,
+                        color: Colors.greenAccent,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                if (isHovering.value &&
+                    selectedCard.value != null &&
+                    canReplaceHover.value)
+                  Center(
+                    child: NesPulser(
+                      child: Icon(
+                        Icons.swap_horiz, // Icon for replacement
+                        color: Colors.blueAccent,
+                        size: 28,
                       ),
                     ),
                   ),

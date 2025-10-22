@@ -13,6 +13,10 @@ class CardContentWidget extends HookConsumerWidget {
   final bool showStats;
   final bool canAfford;
   final bool showHealth;
+  final bool isEnemy;
+  final int stars;
+  final VoidCallback? onAttack;
+
   const CardContentWidget({
     super.key,
     required this.card,
@@ -20,28 +24,59 @@ class CardContentWidget extends HookConsumerWidget {
     this.showStats = false,
     this.canAfford = false,
     this.showHealth = false,
+    this.isEnemy = false,
+    this.stars = 0,
+    this.onAttack,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FlipCardWidget(
-      showBack: showBack,
-      front: Stack(
-        children: [
-          Image.asset("assets/UI/cardBacksideGame.png"),
-          _buildFallbackImage(999.9),
-          Center(child: Image.asset(card.gifPath)),
-          Image.asset(_getCardColorImagePath(card.rarity)),
-          if (showStats)
-            CardStatsWidget(
-              cost: card.cost,
-              canAfford: canAfford,
-              health: card.health,
-              showHealth: showHealth,
-            ),
-        ],
+    return GestureDetector(
+      onTap: (onAttack != null && !card.isTapped && !isEnemy)
+          ? () {
+              onAttack!();
+            }
+          : null,
+      child: FlipCardWidget(
+        showBack: showBack,
+        front: Stack(
+          children: [
+            Image.asset("assets/UI/cardBacksideGame.png"),
+            _buildFallbackImage(999.9),
+            Center(child: Image.asset(card.gifPath)),
+            Image.asset(_getCardColorImagePath(card.rarity)),
+            if (showStats)
+              CardStatsWidget(
+                cost: card.cost,
+                canAfford: canAfford,
+                health: card.health,
+                showHealth: showHealth,
+                attack: card.attack,
+                isEnemy: isEnemy,
+                isTapped: card.isTapped,
+                stars: stars,
+              ),
+            if (onAttack != null && !card.isTapped && !isEnemy)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        back: Image.asset("assets/UI/cardBacksideGame.png"),
       ),
-      back: Image.asset("assets/UI/cardBacksideGame.png"),
     );
   }
 

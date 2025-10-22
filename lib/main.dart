@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
+import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:nes_ui/nes_ui.dart';
+import 'package:pico_card/models/card_model.dart';
+import 'package:pico_card/screens/battle_screen.dart';
+import 'package:pico_card/screens/collection_screen.dart';
+import 'package:pico_card/screens/deck_builder_screen.dart';
+import 'package:pico_card/screens/pack_opening_screen.dart';
+import 'package:pico_card/screens/shop_screen.dart';
 import 'package:pico_card/services/audio_controller.dart';
 import 'package:pico_card/widgets/home_widget.dart';
+import 'package:pico_card/screens/settings_screen.dart';
 
 import 'package:pixelarticons/pixel.dart';
-import 'package:provider/provider.dart';
-import 'services/game_provider.dart';
+import 'services/providers/game_provider.dart';
 
 import 'utils/consts/pixel_theme.dart';
 
@@ -28,31 +35,78 @@ void main() {
   runApp(riverpod.ProviderScope(child: const PicoCardApp()));
 }
 
-class PicoCardApp extends StatelessWidget {
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      name: 'loader',
+      builder: (context, state) => const LoaderScreen(),
+    ),
+    GoRoute(
+      path: '/main_menu',
+      name: 'main_menu',
+      builder: (context, state) => const MainMenuScreen(),
+      routes: [
+        GoRoute(
+          path: 'shop',
+          name: 'shop',
+          builder: (context, state) => const ShopScreen(),
+          routes: [
+            GoRoute(
+              path: 'pack_opening',
+              name: 'pack_opening',
+              builder: (context, state) =>
+                  PackOpeningScreen(openedCards: state.extra as List<GameCard>),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'battle',
+          name: 'battle',
+          builder: (context, state) => const BattleScreen(),
+        ),
+        GoRoute(
+          path: 'deck_builder',
+          name: 'deck_builder',
+          builder: (context, state) => const DeckBuilderScreen(),
+        ),
+        GoRoute(
+          path: 'collection',
+          name: 'collection',
+          builder: (context, state) => const CollectionScreen(),
+        ),
+        GoRoute(
+          path: 'settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
+        ),
+      ],
+    ),
+  ],
+);
+
+class PicoCardApp extends riverpod.ConsumerWidget {
   const PicoCardApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => GameProvider(),
-      child: MaterialApp(
-        title: 'Pico Card TCG',
-        theme: nesTheme,
-        home: const LoaderScreen(),
-        debugShowCheckedModeBanner: false,
-      ),
+  Widget build(BuildContext context, riverpod.WidgetRef ref) {
+    return MaterialApp.router(
+      title: 'Pico Card TCG',
+      theme: nesTheme,
+      routerConfig: _router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class LoaderScreen extends StatefulWidget {
+class LoaderScreen extends riverpod.ConsumerStatefulWidget {
   const LoaderScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoaderScreen> createState() => _LoaderScreenState();
+  riverpod.ConsumerState<LoaderScreen> createState() => _LoaderScreenState();
 }
 
-class _LoaderScreenState extends State<LoaderScreen> {
+class _LoaderScreenState extends riverpod.ConsumerState<LoaderScreen> {
   bool showTerminal = false;
   @override
   void initState() {
@@ -65,19 +119,11 @@ class _LoaderScreenState extends State<LoaderScreen> {
       });
 
       // Phase 2: NES terminal boot with progress
-      final gameProvider = Provider.of<GameProvider>(context, listen: false);
-      await gameProvider.initialize(onStep: (_) {});
+      final gameNotifier = ref.read(gameProvider);
+      await gameNotifier.initialize(onStep: (_) {});
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const MainMenuScreen(),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+      context.goNamed('main_menu');
     });
   }
 
@@ -98,8 +144,9 @@ class _LoaderScreenState extends State<LoaderScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Consumer<GameProvider>(
-            builder: (context, game, _) {
+          child: riverpod.Consumer(
+            builder: (context, ref, child) {
+              final game = ref.watch(gameProvider);
               return NesContainer(
                 backgroundColor: Colors.black,
                 width: double.infinity,
@@ -180,9 +227,10 @@ class MainMenuScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<GameProvider>(
-        builder: (context, gameProvider, child) {
-          if (gameProvider.isLoading) {
+      body: riverpod.Consumer(
+        builder: (context, ref, child) {
+          final gameNotifier = ref.watch(gameProvider);
+          if (gameNotifier.isLoading) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -208,7 +256,7 @@ class MainMenuScreen extends StatelessWidget {
                     initialTabIndex: 0,
                     tabs: [
                       NesTabItem(child: HomeWidget(), label: "Main menu"),
-                      NesTabItem(child: Text("data"), label: "Settings"),
+                      NesTabItem(child: SettingsScreen(), label: "Settings"),
                     ],
                   ),
                 ),

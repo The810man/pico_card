@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show WidgetRef;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart' show HookConsumerWidget;
-import 'package:pico_card/services/game_provider.dart';
-import 'package:provider/provider.dart' show Consumer;
+import 'package:pico_card/services/providers/game_provider.dart';
 
 class RewardedAdButton extends HookConsumerWidget {
   const RewardedAdButton({super.key});
@@ -68,8 +68,9 @@ class RewardedAdButton extends HookConsumerWidget {
       isLoading.value = true;
     }
 
-    return Consumer<GameProvider>(
-      builder: (context, game, _) {
+    return riverpod.Consumer(
+      builder: (context, ref, child) {
+        final gameNotifier = ref.watch(gameProvider);
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pico_card/models/card_model.dart';
-import 'package:pico_card/services/battle_provider.dart';
+import 'package:pico_card/services/providers/battle_provider.dart';
 import 'package:pico_card/widgets/cards/card_stats_widget.dart';
 import 'package:pico_card/widgets/cards/card_widget.dart';
 

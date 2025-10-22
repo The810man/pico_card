@@ -61,15 +61,17 @@ class _InfiniteStripedBackgroundState extends State<InfiniteStripedBackground>
                       children: List.generate(verticalTiles, (row) {
                         return Row(
                           children: List.generate(horizontalTiles, (col) {
-                            return SizedBox(
-                              width: tileWidth,
-                              height: tileHeight,
-                              child: Image.asset(
-                                filterQuality: FilterQuality.none,
-                                isRed
-                                    ? 'assets/images/stripedBgPink.png'
-                                    : 'assets/images/stripedBgBlack.png',
-                                fit: BoxFit.cover,
+                            return Expanded(
+                              child: SizedBox(
+                                width: tileWidth,
+                                height: tileHeight,
+                                child: Image.asset(
+                                  filterQuality: FilterQuality.none,
+                                  isRed
+                                      ? 'assets/images/stripedBgPink.png'
+                                      : 'assets/images/stripedBgBlack.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             );
                           }),

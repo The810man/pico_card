@@ -83,9 +83,7 @@ class CardContentWidget extends HookConsumerWidget {
                     controller.forward().then((val) {
                       tmpCards.value = [...tmpCards.value]..removeAt(index);
                       if (tmpCards.value.isEmpty) {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => ShopScreen()),
-                        );
+                        context.pop();
                       }
                     });
                   }
