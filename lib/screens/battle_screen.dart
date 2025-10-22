@@ -3,7 +3,6 @@ import 'package:flutter_hooks/flutter_hooks.dart' show useState, useEffect;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show WidgetRef;
 import 'package:hooks_riverpod/hooks_riverpod.dart' show HookConsumerWidget;
 import 'package:nes_ui/nes_ui.dart';
-import 'package:pico_card/models/card_model.dart';
 import 'package:pico_card/services/providers/game_provider.dart';
 import 'package:pico_card/services/providers/battle_provider.dart';
 import 'package:pico_card/utils/enums/game_enums.dart';

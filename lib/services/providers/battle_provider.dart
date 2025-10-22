@@ -90,6 +90,23 @@ class BattleState {
 
 class BattleProvider extends StateNotifier<BattleState> {
   bool _mounted = true;
+  // Guard to ensure a single DragTarget processes a given library-card drop
+  final Set<String> _processingDragIds = {};
+  // Try to claim handling of a drop for a specific library card id.
+  // Returns false if some other target already claimed it.
+  bool claimDrag(String id) {
+    if (_processingDragIds.contains(id)) return false;
+    _processingDragIds.add(id);
+    return true;
+  }
+
+  // Release claim for a library card id (safe to call multiple times).
+  void releaseDrag(String id) {
+    _processingDragIds.remove(id);
+  }
+
+  // Guard to prevent duplicate placement from the same library card id
+  final Set<String> _placedFromLibIds = {};
 
   BattleProvider()
     : super(
@@ -214,16 +231,30 @@ class BattleProvider extends StateNotifier<BattleState> {
       ...state.cardLibaryListPlayer.where((c) => c.id != card.id),
     ];
     state = state.copyWith(cardLibaryListPlayer: newLibary);
+
+    // Also clear any pending drag-claim for this library id to avoid stale entries
   }
 
   void addCardToPlayerPlaced(GameCard card) {
+    // Hard guard: do not place twice for the same library drag id
+    if (_placedFromLibIds.contains(card.id)) {
+      return;
+    }
+    _placedFromLibIds.add(card.id);
+    // Cleanup guard shortly after to avoid stale memory
     // Place a fresh copy with a unique runtime id and start tapped (summoning sickness)
-    final String uniqueSuffix = DateTime.now().microsecondsSinceEpoch
-        .toString();
+    final String uniqueSuffix =
+        '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
     final GameCard placed = card.copyWith(
       id: '${card.id}__$uniqueSuffix',
       isTapped: true,
     );
+
+    // Safety: do not exceed 3 slots
+    if (state.cardPlacedListPlayer.length >= 3) {
+      return;
+    }
+
     final List<GameCard> updatedPlayerCards = [
       ...state.cardPlacedListPlayer,
       placed,
@@ -412,8 +443,8 @@ class BattleProvider extends StateNotifier<BattleState> {
         if (state.cardLibaryListEnemy.isNotEmpty) {
           final GameCard card = botGetRandomAffordableCard();
           // Ensure placed enemy copies have unique ids and start tapped (summoning sickness)
-          final String uniqueSuffix = DateTime.now().microsecondsSinceEpoch
-              .toString();
+          final String uniqueSuffix =
+              '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
           final GameCard placed = card.copyWith(
             id: '${card.id}__$uniqueSuffix',
             isTapped: true,
@@ -640,8 +671,8 @@ class BattleProvider extends StateNotifier<BattleState> {
         );
 
     // Create a fresh placed copy with unique id, start tapped (summoning sickness)
-    final String uniqueSuffix = DateTime.now().microsecondsSinceEpoch
-        .toString();
+    final String uniqueSuffix =
+        '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 20)}';
     final GameCard placed = incomingFromLib.copyWith(
       id: '${incomingFromLib.id}__$uniqueSuffix',
       isTapped: true,

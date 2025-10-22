@@ -78,6 +78,29 @@ class HoverableCardHolder extends HookConsumerWidget {
         selectedCard.value?.isTapped,
       ],
     );
+
+    // Keep the locally selected placed-card in sync with provider updates
+    // (e.g., untap at start of turn, stat changes, etc.)
+    useEffect(() {
+      final sel = selectedCard.value;
+      if (sel == null) return null;
+
+      final placedList = ref.read(battleProvider).cardPlacedListPlayer;
+      final idx = placedList.indexWhere((c) => c.id == sel.id);
+      if (idx == -1) {
+        // Card was removed (died/replaced)
+        selectedCard.value = null;
+        showBack.value = false;
+      } else {
+        final latest = placedList[idx];
+        if (!identical(latest, sel)) {
+          selectedCard.value = latest;
+        }
+        showBack.value = latest.isTapped;
+      }
+      return null;
+    }, [battle.cardPlacedListPlayer, selectedCard.value?.id]);
+
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) {
         isHovering.value = true;
@@ -123,6 +146,11 @@ class HoverableCardHolder extends HookConsumerWidget {
         final incoming = details.data;
         final placed = selectedCard.value;
 
+        // Claim this drop to prevent double-processing by multiple DragTargets
+        if (!battleController.claimDrag(incoming.id)) {
+          return;
+        }
+
         isHovering.value = false;
         canUpgradeHover.value = false; // Clear hover state
         canReplaceHover.value = false; // Clear hover state
@@ -137,12 +165,10 @@ class HoverableCardHolder extends HookConsumerWidget {
             // Attempt upgrade path (already validated in onWillAccept)
             battleController.upgradeCard(placed, incoming);
             // Keep selection on the upgraded card
-            final latestPlaced = ref
-                .read(battleProvider)
-                .cardPlacedListPlayer
-                .where((c) => c.id == placed.id)
-                .firstOrNull;
-            if (latestPlaced != null) {
+            final placedList = ref.read(battleProvider).cardPlacedListPlayer;
+            final idx = placedList.indexWhere((c) => c.id == placed.id);
+            if (idx != -1) {
+              final latestPlaced = placedList[idx];
               selectedCard.value = latestPlaced;
               showBack.value = latestPlaced.isTapped;
             }
@@ -152,27 +178,35 @@ class HoverableCardHolder extends HookConsumerWidget {
             // After replacing, select the just-placed instance (with the new runtime id)
             final placedList = ref.read(battleProvider).cardPlacedListPlayer;
             if (placedList.isNotEmpty) {
-              // Find the newly placed card (it will have the incoming.id as its base)
+              final baseIdIncoming = base.baseIdOf(incoming.id);
               final newCard = placedList.firstWhere(
-                (c) => base.baseIdOf(c.id) == base.baseIdOf(incoming.id),
+                (c) => base.baseIdOf(c.id) == baseIdIncoming,
+                orElse: () => placedList.last,
               );
               selectedCard.value = newCard;
               showBack.value = newCard.isTapped; // true on place
+            } else {
+              selectedCard.value = null;
+              showBack.value = false;
             }
           }
+          // Release drag claim now that handling is complete for upgrade/replace
+          battleController.releaseDrag(incoming.id);
           return;
         }
 
         // Placement path for empty slot
+        // Remove the dragged library card now (id-based, safe if already removed)
+        battleController.removeCardFromLibary(incoming);
         battleController.usePlayerMana(incoming.cost);
         battleController.addCardToPlayerPlaced(incoming);
+        // Release drag claim after successful placement
+        battleController.releaseDrag(incoming.id);
 
-        // After placing, select the just-placed instance (with the new runtime id)
-        final placedList = ref.read(battleProvider).cardPlacedListPlayer;
-        if (placedList.isNotEmpty) {
-          selectedCard.value = placedList.last;
-          showBack.value = placedList.last.isTapped; // true on place
-        }
+        // Do not set local selectedCard here.
+        // Let the parent row rebuild and supply the placed card for this slot
+        // to avoid rendering the same card twice (local + parent-driven).
+        battleController.releaseDrag(incoming.id);
       },
       builder:
           (

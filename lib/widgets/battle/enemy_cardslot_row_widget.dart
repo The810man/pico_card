@@ -22,7 +22,7 @@ class EnemyCardslotRowWidget extends ConsumerWidget {
     return Positioned(
       right: 0,
       left: 0,
-      top: MediaQuery.of(context).size.height * 0.15,
+      top: MediaQuery.of(context).size.height * 0.244,
       child: SizedBox(
         width: MediaQuery.of(context).size.width,
         child: Row(
@@ -155,22 +155,9 @@ class EnemyCardslotRowWidget extends ConsumerWidget {
               return Container(
                 height: 160,
                 width: 105,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Colors.grey.withOpacity(0.3),
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+
                 child: Stack(
                   children: [
-                    Center(
-                      child: Icon(
-                        Icons.add,
-                        color: Colors.grey.withOpacity(0.5),
-                        size: 30,
-                      ),
-                    ),
                     if (battle.attackMode)
                       Positioned(
                         top: 4,
