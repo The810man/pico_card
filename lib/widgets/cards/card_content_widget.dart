@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:pico_card/models/card_model.dart';
 import 'package:pico_card/utils/consts/pixel_theme.dart';
 import 'package:pico_card/utils/painters/pixel_pattern_painter.dart';
 import 'package:pico_card/widgets/cards/card_stats_widget.dart';
 import 'package:pico_card/widgets/cards/flip_card_widget.dart';
 import 'package:pixelarticons/pixel.dart';
+import 'package:pico_card/services/providers/battle_provider.dart';
 
 class CardContentWidget extends HookConsumerWidget {
   final GameCard card;
@@ -31,6 +33,37 @@ class CardContentWidget extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Compute upgrade hint for library cards (hand) if they can upgrade a placed card.
+    // Show on top-left with upgrade cost, colored red if not affordable.
+    final battle = ref.watch(battleProvider);
+    int? _upgradeCost;
+    bool _showUpgrade = false;
+    bool _affordUpgrade = false;
+
+    // Heuristic: library cards render with showHealth == false and showStats == true
+    if (!showHealth && showStats && !isEnemy) {
+      String _baseId(String id) {
+        final idx = id.indexOf('__');
+        return idx == -1 ? id : id.substring(0, idx);
+      }
+
+      for (final placed in battle.cardPlacedListPlayer) {
+        if (_baseId(placed.id) == _baseId(card.id)) {
+          final currentStars = battle.starLevels[placed.id] ?? 0;
+          if (currentStars < 5) {
+            final cost = card.cost + currentStars + 1;
+            if (_upgradeCost == null || cost < _upgradeCost!) {
+              _upgradeCost = cost;
+            }
+          }
+        }
+      }
+      if (_upgradeCost != null) {
+        _showUpgrade = true;
+        _affordUpgrade = battle.playerMana >= _upgradeCost!;
+      }
+    }
+
     return GestureDetector(
       onTap: (onAttack != null && !card.isTapped && !isEnemy)
           ? () {
@@ -40,11 +73,47 @@ class CardContentWidget extends HookConsumerWidget {
       child: FlipCardWidget(
         showBack: showBack,
         front: Stack(
+          clipBehavior: Clip.none,
           children: [
             Image.asset("assets/UI/cardBacksideGame.png"),
             _buildFallbackImage(999.9),
             Center(child: Image.asset(card.gifPath)),
             Image.asset(_getCardColorImagePath(card.rarity)),
+            // Upgrade hint for library cards (top-left)
+            if (_showUpgrade)
+              Positioned(
+                top: 0,
+                left: -5,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.upgrade,
+                        size: 16,
+                        color: _affordUpgrade ? Colors.white : Colors.red,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        "${_upgradeCost ?? ''}",
+                        style: TextStyle(
+                          color: _affordUpgrade ? Colors.white : Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (showStats)
               CardStatsWidget(
                 cost: card.cost,
@@ -66,10 +135,10 @@ class CardContentWidget extends HookConsumerWidget {
                     color: Colors.red.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 12,
+                  child: NesIcon(
+                    iconData: NesIcons.thinArrowRight,
+                    primaryColor: Colors.white,
+                    size: Size(15, 15),
                   ),
                 ),
               ),

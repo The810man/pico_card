@@ -506,8 +506,8 @@ class BattleProvider extends StateNotifier<BattleState> {
   }
 
   void botAttkWithCard(GameCard card) {
+    // If player has no cards, go direct
     if (state.cardPlacedListPlayer.isEmpty) {
-      // Mark which enemy card is attacking (direct attack)
       state = state.copyWith(
         enemyAttacking: true,
         enemyAttackingCard: card,
@@ -515,7 +515,7 @@ class BattleProvider extends StateNotifier<BattleState> {
       );
       damagePlayer(card.attack);
 
-      // Ensure the attacking enemy card is tapped after attacking directly
+      // Tap attacker after direct attack
       final List<GameCard> updatedEnemyCards = state.cardPlacedListEnemy
           .map((c) => c.id == card.id ? card.copyWith(isTapped: true) : c)
           .toList();
@@ -533,9 +533,41 @@ class BattleProvider extends StateNotifier<BattleState> {
       return;
     }
 
-    // Mark which enemy card is attacking a player card
-    final int plCardIndex = Random().nextInt(state.cardPlacedListPlayer.length);
-    final GameCard toAttackCard = state.cardPlacedListPlayer[plCardIndex];
+    // Filter to untapped player defenders
+    final List<GameCard> untappedDefenders = state.cardPlacedListPlayer
+        .where((c) => !c.isTapped)
+        .toList();
+
+    // If all defenders are tapped, attack player directly
+    if (untappedDefenders.isEmpty) {
+      state = state.copyWith(
+        enemyAttacking: true,
+        enemyAttackingCard: card,
+        enemyTargetCard: null,
+      );
+      damagePlayer(card.attack);
+
+      // Tap attacker after direct attack
+      final List<GameCard> updatedEnemyCards = state.cardPlacedListEnemy
+          .map((c) => c.id == card.id ? card.copyWith(isTapped: true) : c)
+          .toList();
+      state = state.copyWith(cardPlacedListEnemy: updatedEnemyCards);
+
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) {
+          state = state.copyWith(
+            enemyAttacking: false,
+            enemyAttackingCard: null,
+            enemyTargetCard: null,
+          );
+        }
+      });
+      return;
+    }
+
+    // Otherwise attack a random untapped defender
+    final int plCardIndex = Random().nextInt(untappedDefenders.length);
+    final GameCard toAttackCard = untappedDefenders[plCardIndex];
 
     state = state.copyWith(
       enemyAttacking: true,
@@ -584,6 +616,12 @@ class BattleProvider extends StateNotifier<BattleState> {
     if (state.turn != TurnType.player) return;
     if (attackingCard.isTapped) return;
 
+    // Only allowed if opponent has no untapped defenders
+    final bool hasUntappedEnemy = state.cardPlacedListEnemy.any(
+      (c) => !c.isTapped,
+    );
+    if (hasUntappedEnemy) return;
+
     damageEnemy(attackingCard.attack);
 
     // Mark attacking card as tapped
@@ -627,6 +665,9 @@ class BattleProvider extends StateNotifier<BattleState> {
   void attackCard(GameCard targetCard) {
     if (!state.attackMode || state.selectedAttackingCard == null) return;
     if (state.turn != TurnType.player) return;
+
+    // Prevent attacking tapped enemy cards
+    if (targetCard.isTapped) return;
 
     // Show attack animation
     // Note: Animation will be handled by the widget that calls this
@@ -873,12 +914,10 @@ class BattleProvider extends StateNotifier<BattleState> {
   // Refund the cost of the recycled card, and pay the cost of the incoming card.
   // New placed card starts tapped and resets stars for that slot.
   void replaceCard(GameCard slotCard, GameCard incomingFromLib) {
-    // Compute mana after replacement: pay incoming, refund old
-    final int newMana =
-        (state.playerMana - incomingFromLib.cost + slotCard.cost).clamp(
-          0,
-          VALUE_MAX_MANA,
-        );
+    // Compute mana after replacement: pay incoming, refund part of the old card (cost - 1)
+    final int refund = (slotCard.cost - 1).clamp(0, slotCard.cost);
+    final int newMana = (state.playerMana - incomingFromLib.cost + refund)
+        .clamp(0, VALUE_MAX_MANA);
 
     // Create a fresh placed copy with unique id, start tapped (summoning sickness)
     final String uniqueSuffix =

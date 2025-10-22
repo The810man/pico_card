@@ -145,7 +145,10 @@ class BattleScreen extends HookConsumerWidget {
                               },
                             ),
                           if (battle.attackMode &&
-                              battle.cardPlacedListEnemy.isEmpty)
+                              (battle.cardPlacedListEnemy.isEmpty ||
+                                  battle.cardPlacedListEnemy.every(
+                                    (c) => c.isTapped,
+                                  )))
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: NesButton.text(

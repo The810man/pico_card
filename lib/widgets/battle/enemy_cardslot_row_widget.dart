@@ -48,7 +48,7 @@ class EnemyCardslotRowWidget extends ConsumerWidget {
                       showStats: true,
                       isEnemy: true,
                       stars: (battle.starLevels[enemyDeck[index].id] ?? 0),
-                      onTap: battle.attackMode
+                      onTap: (battle.attackMode && !enemyDeck[index].isTapped)
                           ? () {
                               final attacking = battle.selectedAttackingCard;
                               if (attacking == null) return;
@@ -114,7 +114,7 @@ class EnemyCardslotRowWidget extends ConsumerWidget {
                             }
                           : null,
                     ),
-                    if (battle.attackMode)
+                    if (battle.attackMode && !enemyDeck[index].isTapped)
                       Positioned(
                         top: 4,
                         right: 4,

@@ -104,6 +104,33 @@ class HoverableCardHolder extends HookConsumerWidget {
       return null;
     }, [battle.cardPlacedListPlayer, selectedCard.value?.id]);
 
+    // Slot-based sync: ensure this holder shows the card that currently belongs to its slot
+    useEffect(() {
+      if (slotIndex == null) return null;
+
+      final placedList = ref.read(battleProvider).cardPlacedListPlayer;
+      final mapping = ref.read(battleProvider).playerSlotIndex;
+
+      GameCard? atSlot;
+      for (final c in placedList) {
+        final idx = mapping[c.id];
+        if (idx == slotIndex) {
+          atSlot = c;
+          break;
+        }
+      }
+
+      final current = selectedCard.value;
+      if (atSlot?.id != current?.id) {
+        selectedCard.value = atSlot;
+        showBack.value = atSlot?.isTapped ?? false;
+      } else if (atSlot != null) {
+        // keep flip state in sync with tap state
+        showBack.value = atSlot.isTapped;
+      }
+      return null;
+    }, [battle.cardPlacedListPlayer, battle.playerSlotIndex, slotIndex]);
+
     return DragTarget<GameCard>(
       onWillAcceptWithDetails: (details) {
         isHovering.value = true;
@@ -167,31 +194,11 @@ class HoverableCardHolder extends HookConsumerWidget {
           if (baseMatch) {
             // Attempt upgrade path (already validated in onWillAccept)
             battleController.upgradeCard(placed, incoming);
-            // Keep selection on the upgraded card
-            final placedList = ref.read(battleProvider).cardPlacedListPlayer;
-            final idx = placedList.indexWhere((c) => c.id == placed.id);
-            if (idx != -1) {
-              final latestPlaced = placedList[idx];
-              selectedCard.value = latestPlaced;
-              showBack.value = latestPlaced.isTapped;
-            }
+            // Slot-based sync effect will refresh the shown card/states.
           } else {
             // Attempt replace path (already validated in onWillAccept)
             battleController.replaceCard(placed, incoming);
-            // After replacing, select the just-placed instance (with the new runtime id)
-            final placedList = ref.read(battleProvider).cardPlacedListPlayer;
-            if (placedList.isNotEmpty) {
-              final baseIdIncoming = base.baseIdOf(incoming.id);
-              final newCard = placedList.firstWhere(
-                (c) => base.baseIdOf(c.id) == baseIdIncoming,
-                orElse: () => placedList.last,
-              );
-              selectedCard.value = newCard;
-              showBack.value = newCard.isTapped; // true on place
-            } else {
-              selectedCard.value = null;
-              showBack.value = false;
-            }
+            // Slot-based sync effect will pick up the new placed id for this slot.
           }
           // Release drag claim now that handling is complete for upgrade/replace
           battleController.releaseDrag(incoming.id);
