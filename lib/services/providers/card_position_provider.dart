@@ -1,4 +1,5 @@
 import 'dart:ui' show Rect, Offset;
+import 'dart:async' show Future;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CardPositionNotifier extends StateNotifier<Map<String, Rect>> {
@@ -22,7 +23,10 @@ class CardPositionNotifier extends StateNotifier<Map<String, Rect>> {
   void removeCard(String cardId) {
     if (!state.containsKey(cardId)) return;
     final next = {...state}..remove(cardId);
-    state = next;
+    // Defer provider mutation to avoid modifying providers during build/dispose
+    Future.microtask(() {
+      state = next;
+    });
   }
 
   Rect? rectOf(String cardId) => state[cardId];
